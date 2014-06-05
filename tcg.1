@@ -1,0 +1,80 @@
+.Dd 2005.11.24
+.Os POSIX
+.Dt HIGHLANDER
+.Th tcg.mdoc 1c
+.Sh NAME
+.Nm tcg
+.Nd A tiny code generator
+.Sh SYNOPSIS
+.Nm
+.Op Fl CP
+.Op -b Ar basename
+.Op -p Ar prefix
+.Op -m Ar memberspec
+.Ar -n name
+
+.Sh DESCRIPTION
+.Nm
+is short for Tiny Code Generator, a program that creates abstract 
+data types (ADT) in C.
+.Sh OPTIONS
+.Bl -tag -width indent
+.It Fl n Ar name
+Name of the ADT. 
+
+.It Fl m Ar memberspec
+Specifies the members in the ADT. We use (a slightly modified)
+printf() syntax to specify the type of the members.
+Each memberspec is *terminated* with a semicolon(;).
+ %d   int
+ %d8  C99 int8_t
+ %d16 C99 int16_t
+ %d32 C99 int32_t
+ %u   unsigned int
+ %u8  C99 uint8_t
+ %u16 C99 uint16_t
+ %u32 C99 uint32_t
+ %f   float
+ %g   double
+ %s   char*
+ %Ns  char array, where N is number of characters including the '\\0' string terminator.
+ %p   pointer to void.
+.Pp
+Example:
+ -m "name=%20s;age=%d;average_salary=%g;"
+
+.It Fl p Ar prefix
+A prefix to be used in the guard macro name. If the ADT is
+named foo, a guard macro will be named FOO_H unless a prefix
+is used as well. If the prefix is MYLIB, the guard will be 
+named MYLIB_FOO_H
+
+.It Fl b Ar basename
+tcg will create two files, a header file and a c file. The
+basename for these files will be the same as the name of the adt
+unless -b basename is used.
+.It Fl C
+Generate a check program, which will test the ADT.
+.It Fl F
+Generate functions to read and write the ADT from/to a FILE*.
+.It Fl M
+Generate man page templates for the ADT and its member functions.
+.It Fl P
+Generate pack functions. When this option is used, three functions
+are added to the ADT. These three functions will be named adtname_pack(),
+adtname_unpack() and adtname_packsize(). 
+.Pp
+Note that not all data types
+can be packed into a char buffer, only char arrays and the C99 fixed
+size integers(intX_t and uintX_t) will be packed/unpacked and included
+in the size computation. The reason is that we only pack data types
+we can represent on all platforms.
+char[] members will be packed with exact max length, including
+the trailing zero.
+We do not use the ntohl() function(and friends) since we want
+the code to work on non-POSIX platforms. For now we always do
+the conversion to/from Network Byte Order ourselves.
+.El
+.Sh AUTHOR
+.An B. Augestad, bjorn.augestad@gmail.com
+
