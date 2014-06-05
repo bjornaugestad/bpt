@@ -1,0 +1,27 @@
+.Dd 2005.11.24
+.Os POSIX
+.Dt Bjorns Power Tools
+.Th bf.mdoc 1c
+.Sh NAME
+.Nm bf
+.Nd buffer file input
+.Sh SYNOPSIS
+.Nm
+.Ar filename
+.Sh DESCRIPTION
+.Nm
+reads input from stdin and writes it to a named file, after
+all input has been read. The idea behind bf is to be able to
+manipulate a file's contents one one command line, both reading
+and writing to the file in one go. cat foo | bf foo will work
+since bf will write its input to a temp file and rename that 
+temp file to foo when all input's been read.
+
+Other examples can be:
+   grep -v foo bar | bf bar
+
+
+.El
+.Sh AUTHOR
+.An B. Augestad, bjorn.augestad@gmail.com
+

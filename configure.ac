@@ -1,5 +1,5 @@
 AC_PREREQ(2.57)
-AC_INIT(metatools, 1.0.0, bjorn.augestad@gmail.com)
+AC_INIT(Bjorns Power Tools, 1.0.0, bjorn.augestad@gmail.com)
 AC_CONFIG_AUX_DIR([extras])
 AC_CONFIG_MACRO_DIR([extras])
 AM_INIT_AUTOMAKE
