@@ -9,10 +9,6 @@ AC_CONFIG_SRCDIR([tcg.c])
 AC_PROG_CC
 AM_PROG_CC_C_O
 
-# Checks for libraries.
-#AC_CHECK_LIB([highlander], [http_server_new])
-#AC_CHECK_LIB([pthread], [pthread_create])
-
 # Checks for header files.
 
 # Checks for typedefs, structures, and compiler characteristics.
