@@ -1,8 +1,8 @@
 AM_CFLAGS=\
 	-D_GNU_SOURCE \
-	-Winline -Wshadow -W -Wformat -Wall -pedantic -std=gnu99 -Werror -O -DNDEBUG
+	-Winline -Wshadow -W -Wformat -Wall -pedantic -std=gnu99 -Werror -O
 
-bin_PROGRAMS=bf tcg 
+bin_PROGRAMS=bf tcg nitfind nitpick
 tcg_SOURCES=tcg.c
 bf_SOURCES=bf.c
 EXTRA_DIST=$(man_MANS)
