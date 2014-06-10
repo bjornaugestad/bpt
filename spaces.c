@@ -112,6 +112,19 @@ static int operator(void)
     return 0;
 }
 
+/* -a, as in foo = -a; foo = 2 * -a; et. al. 
+ * Tricky to detect properly. Be conservative. */
+static int sign_operator(void)
+{
+    if (buflen < 3)
+        return 0;
+
+    if(isalpha(linebuf[buflen - 1])
+    && (linebuf[buflen - 2] == '-' || linebuf[buflen - 2] == '+')
+    && strchr("=*/ ", linebuf[buflen - 3]))
+        return 1;
+    return 0;
+}
 
 static int getnext(FILE *f)
 {
@@ -181,7 +194,8 @@ static void normal(FILE *out, int last, int c, int next)
         if(strchr(tokens, last) 
         && !include_statement()
         && !deref_pointer()
-        && !operator())
+        && !operator()
+        && !sign_operator())
             fputc(' ', out);
     }
     else if (isdigit(c)) {
