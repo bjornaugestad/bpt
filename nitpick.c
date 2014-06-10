@@ -275,7 +275,7 @@ static void usage(const char *name)
 {
     const char *text = "usage: %s opts... file...\n"
         "opts are [nrktea]\n"
-        "-n Fix trailing whitespace\n"
+        "-w Fix trailing whitespace\n"
         "-n Fix consecutive newlines\n"
         "-r Fix return-statements with ()\n"
         "-k Add spaces after keywords\n"
