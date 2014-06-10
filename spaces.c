@@ -198,7 +198,7 @@ static void normal(FILE *out, int last, int c, int next)
         }
     }
     else if (c == '-') {
-        if (last == ']')
+        if (last == ']' && next != '>')
             fputc(' ', out);
         else if(isalnum(last)) {
             // Keep floats with scientific format (1e-03)
