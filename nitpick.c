@@ -219,7 +219,7 @@ static int end_of_file(FILE *f)
 static void process_file(const char *filename)
 {
     FILE *in, *out;
-    const char *tmpfile = tempnam(".", "nitp");
+    const char *tempfile = tempnam(".", "nitp");
 
     char line[10240];
     size_t n, nblanklines = 0;
@@ -228,8 +228,8 @@ static void process_file(const char *filename)
         perror(filename);
         return;
     }
-    else if ( (out = fopen(tmpfile, "w")) == NULL) {
-        perror(tmpfile);
+    else if ( (out = fopen(tempfile, "w")) == NULL) {
+        perror(tempfile);
         fclose(in);
         return;
     }
@@ -258,14 +258,14 @@ static void process_file(const char *filename)
             perror("fprintf");
             fclose(in);
             fclose(out);
-            unlink(tmpfile);
+            unlink(tempfile);
             exit(EXIT_FAILURE);
         }
     }
 
     fclose(in);
     fclose(out);
-    if (rename(tmpfile, filename) == -1) {
+    if (rename(tempfile, filename) == -1) {
         perror("rename");
         exit(EXIT_FAILURE);
     }
@@ -273,7 +273,7 @@ static void process_file(const char *filename)
 
 static void usage(const char *name)
 {
-    const char *usage = "usage: %s opts... file...\n"
+    const char *text = "usage: %s opts... file...\n"
         "opts are [nrktea]\n"
         "-n Fix trailing whitespace\n"
         "-n Fix consecutive newlines\n"
@@ -282,7 +282,7 @@ static void usage(const char *name)
         "-t Replace one TAB with four spaces\n"
         "-e Fix blank line at end of file\n";
 
-    printf(usage, name);
+    printf(text, name);
 }
 
 static void parse_commandline(int argc, char *argv[])
