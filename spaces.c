@@ -200,6 +200,8 @@ static void normal(FILE *out, int last, int c, int next)
     else if (c == '-') {
         if (last == ']' && next != '>')
             fputc(' ', out);
+        else if (last == '=')
+            fputc(' ', out);
         else if(isalnum(last)) {
             // Keep floats with scientific format (1e-03)
             if(last == 'e' && isdigit(next)) {
