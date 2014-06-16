@@ -5,7 +5,8 @@ AM_CFLAGS=\
 	-Winline -Wshadow -W -Wformat -Wall -pedantic -std=gnu99 -Werror -O
 
 bin_PROGRAMS=bf tcg nitfind nitpick find_unused_headers\
-	spaces
+	spaces 
+
 tcg_SOURCES=tcg.c
 bf_SOURCES=bf.c
 EXTRA_DIST=$(man_MANS)

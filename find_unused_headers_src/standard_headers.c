@@ -13,7 +13,7 @@ static struct {
 } std[] = { 
     { 
         { "assert.h", "cassert", NULL }, 
-        { "NDEBUG", "assert" }
+        { "NDEBUG", "assert", "static_assert" }
     },
     {
         { "complex.h", NULL },

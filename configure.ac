@@ -7,6 +7,7 @@ AC_CONFIG_SRCDIR([tcg.c])
 
 # Checks for programs.
 AC_PROG_CC
+AM_PROG_CC_C_O
 
 # Checks for libraries.
 #AC_CHECK_LIB([highlander], [http_server_new])
