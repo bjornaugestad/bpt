@@ -56,6 +56,7 @@ static void rstrip(char *s)
 
 /* Legal characters in addition to isalnum()'s definition */
 const char *filechars = "._/";
+const char *fnchars = ":";
 
 /* A line is a filename if it consists of [A-z0-9_]*
  * We dislike trailing ws so rstrip the line first. */
@@ -74,7 +75,7 @@ static int line_is_filename(const char *s)
 
 static int is_legal_char(char c)
 {
-    if(isalnum(c) || strchr(filechars, c) != NULL)
+    if(isalnum(c) || strchr(filechars, c) != NULL || strchr(fnchars, c) != NULL)
         return 1;
     return 0;
 }

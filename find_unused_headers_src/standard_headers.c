@@ -322,7 +322,10 @@ static struct {
     {
         { "memory", NULL },
         { "allocator", "auto_ptr", "auto_ptr_ref", "raw_storage_iterator",
-          "get_temporary_buffer", "return_temporary_buffer",
+          "get_temporary_buffer", "return_temporary_buffer", "shared_ptr", 
+          "weak_ptr", "unique_ptr", "default_delete", "make_shared", 
+          "allocate_shared", "static_pointer_cast", "dynamic_pointer_cast",
+          "const_pointer_cast", "get_deleter", "owner_less", "enable_shared_from_this",
           "uninitialized_copy", "uninitialized_fill", "uninitialized_fill_n"
         }
     },
