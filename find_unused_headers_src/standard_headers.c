@@ -248,7 +248,7 @@ static struct {
             "setvbuf", "snprintf", "vsnprintf", "sprinf", "sprintf", "sscanf", "stderr", 
             "stdin", "stdout", "svnprintf", "tmpfile", "tmpnam", "ungetc", "vfprintf", 
             "vfscanf", "vprintf", "vscanf", "vsprintf", "vsscanf",
-            "vasprintf" /* GNU extension */
+            "vasprintf", "dprintf", "vdprintf", /* GNU extension */
         }
     },
 
