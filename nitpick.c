@@ -112,8 +112,8 @@ struct remap {
     regex_t preg;
     void (*handler)(char *buf, size_t bufsize, regmatch_t *pmatch, size_t nmatch);
 } map[] = {
-    { .re = "^([ ]*return)[ ]*\\(([^\\(]*)\\)([ ]*;.*)", .handler = handle_return },
-    { .re = "^([ ]*)(for|if|while|switch)(\\(.*)", .handler = handle_keyword_space },
+    { .re = "^([ \t]*return)[ ]*\\(([^\\(]*)\\)([ ]*;.*)", .handler = handle_return },
+    { .re = "^([ \t]*)(for|if|while|switch)(\\(.*)", .handler = handle_keyword_space },
 };
 
 static void compile_re(void)

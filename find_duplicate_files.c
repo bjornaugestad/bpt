@@ -186,6 +186,7 @@ int callback(const char *fpath, const struct stat *sb, int typeflag, struct FTW 
     char *string = NULL, *s;
     unsigned char *digest = NULL;
     void *contents = NULL;
+    static unsigned long nfiles;
 
     // Ignore anything but regular files
     if (!S_ISREG(sb->st_mode)) {
@@ -226,16 +227,15 @@ int callback(const char *fpath, const struct stat *sb, int typeflag, struct FTW 
     for (i = 0; i < digestsize; i++, s += 2)
         sprintf(s, "%02x", digest[i]);
 
-    if (verbose)
-        printf("file: %s hash: %s\n", fpath, string);
-
     // So far so good. Store path and hash somewhere suitable
     // for qsort().
+    add_entry(fpath, string);
+    if (verbose)
+        fprintf(stderr, "\r%lu", ++nfiles);
 
     munmap(contents, sb->st_size);
     close(fd);
     free(digest);
-    add_entry(fpath, string);
     return 0;
 
 err:
@@ -262,8 +262,13 @@ static void traverse_directories(void)
     assert(nsearchdirs > 0);
 
     for (i = 0; i < nsearchdirs; i++) {
-        printf("Checking directory:%s\n", searchdirs[i]);
+        if (verbose)
+            fprintf(stderr, "Checking directory:%s\n", searchdirs[i]);
+
         nftw(searchdirs[i], callback, nopenfd, ftw_flags);
+
+        if (verbose)
+            fprintf(stderr, "\n");
     }
 }
 

@@ -5,7 +5,8 @@ AM_CFLAGS=\
 	-Winline -Wshadow -W -Wformat -Wall -pedantic -std=gnu99 -O
 
 bin_PROGRAMS=bf tcg nitfind nitpick find_unused_headers\
-	spaces find_odd_indentation find_duplicate_files
+	spaces find_odd_indentation find_duplicate_files\
+	genman
 
 tcg_SOURCES=tcg.c
 bf_SOURCES=bf.c
