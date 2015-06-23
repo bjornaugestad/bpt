@@ -150,7 +150,6 @@ static void add_die_and_warning(FILE *f)
         "    va_start(ap, fmt);",
         "    vfprintf(stderr, fmt, ap);",
         "    va_end(ap);",
-        "    exit(1);",
         "}",
         "",
     };
