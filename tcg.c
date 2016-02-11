@@ -81,9 +81,11 @@ enum datatype {
     dtd8,
     dtd16,
     dtd32,
+    dtd64,
     dtu8,
     dtu16,
     dtu32,
+    dtu64,
     dtFloat,
     dtDouble,
     dtChar,
@@ -148,10 +150,12 @@ p(f, "         %%z   size_t\n");
 p(f, "         %%d8  C99 int8_t\n");
 p(f, "         %%d16 C99 int16_t\n");
 p(f, "         %%d32 C99 int32_t\n");
+p(f, "         %%d64 C99 int64_t\n");
 p(f, "         %%u   unsigned int\n");
 p(f, "         %%u8  C99 uint8_t\n");
 p(f, "         %%u16 C99 uint16_t\n");
 p(f, "         %%u32 C99 uint32_t\n");
+p(f, "         %%u64 C99 uint64_t\n");
 p(f, "         %%f   float\n");
 p(f, "         %%g   double\n");
 p(f, "         %%s   char*\n");
@@ -566,12 +570,16 @@ static struct map_type {
     { "t",	"\"t\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtTime_t,		"time_t %s",	"time_t",	"time_t" },
     { "u",	"\"u\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtUint,			"unsigned int %s",	"unsigned int",		"unsigned int" },
     { "z",	"\"zu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtSize_t,		"size_t %s",		"size_t",		"size_t" },
+
     { "d8",	"PRId8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtd8,           "int8_t %s",        	"int8_t",       	"int8_t" },
     { "d16","PRId16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtd16,          "int16_t %s",       	"int16_t",      	"int16_t" },
     { "d32","PRId32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtd32,          "int32_t %s",       	"int32_t",      	"int32_t" },
+    { "d64","PRId64",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtd64,          "int64_t %s",       	"int64_t",      	"int64_t" },
     { "u8",	"PRIu8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtu8,           "uint8_t %s",       	"uint8_t",      	"uint8_t" },
     { "u16","PRIu16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtu16,          "uint16_t %s",      	"uint16_t",     	"uint16_t" },
     { "u32","PRIu32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtu32,          "uint32_t %s",      	"uint32_t",     	"uint32_t" },
+    { "u64","PRIu64",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtu64,          "uint64_t %s",      	"uint64_t",     	"uint64_t" },
+
     { "f",	"\"f\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtFloat,	"float %s",		"float",		"float" },
     { "g",	"\"g\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtDouble,	"double %s",		"double",		"double" },
     { "p",	"NONE",		0, 1, 3, 0, 0, 0, 0, COPY_GRAB_PTR,	dtVoidPointer,	"void* %s",		"void*",		"void*" },
@@ -1578,9 +1586,11 @@ static int use_c99_types(void)
         if (members[i].dt == dtd8
         || members[i].dt == dtd16
         || members[i].dt == dtd32
+        || members[i].dt == dtd64
         || members[i].dt == dtu8
         || members[i].dt == dtu16
-        || members[i].dt == dtu32)
+        || members[i].dt == dtu32
+        || members[i].dt == dtu64)
             return 1;
     }
 
@@ -1720,6 +1730,19 @@ static void generate_packfunc(FILE *f)
                 p(f, "\n");
                 break;
 
+            case dtd64:
+            case dtu64:
+                p(f, "\tbuf[i++] = (p->%s & 0xff00000000000000) >> 56;\n", pm->name);
+                p(f, "\tbuf[i++] = (p->%s & 0x00ff000000000000) >> 48;\n", pm->name);
+                p(f, "\tbuf[i++] = (p->%s & 0x0000ff0000000000) >> 40;\n", pm->name);
+                p(f, "\tbuf[i++] = (p->%s & 0x000000ff00000000) >> 32;\n", pm->name);
+                p(f, "\tbuf[i++] = (p->%s & 0x00000000ff000000) >> 24;\n", pm->name);
+                p(f, "\tbuf[i++] = (p->%s & 0x0000000000ff0000) >> 16;\n", pm->name);
+                p(f, "\tbuf[i++] = (p->%s & 0x000000000000ff00) >>  8;\n", pm->name);
+                p(f, "\tbuf[i++] = (p->%s & 0x00000000000000ff);\n", pm->name);
+                p(f, "\n");
+                break;
+
             default:
                 fprintf(stderr, "Internal error\n");
                 abort();
@@ -1736,6 +1759,7 @@ static void generate_packfunc(FILE *f)
 static void generate_unpackfunc(FILE *f)
 {
     size_t i;
+    const char *cdecl;
 
     p(f, "size_t %s_unpack(%s p, const unsigned char* buf, size_t size)\n", g_name, g_name);
     p(f, "{\n");
@@ -1776,6 +1800,20 @@ static void generate_unpackfunc(FILE *f)
                 p(f, "\tp->%s  = buf[i++] << 24;\n", pm->name);
                 p(f, "\tp->%s |= buf[i++] << 16;\n", pm->name);
                 p(f, "\tp->%s |= buf[i++] <<  8;\n", pm->name);
+                p(f, "\tp->%s |= buf[i++];\n", pm->name);
+                p(f, "\n");
+                break;
+
+            case dtd64:
+            case dtu64:
+                cdecl = get_cparam(pm);
+                p(f, "\tp->%s  = (%s)buf[i++] << 56;\n", pm->name, cdecl);
+                p(f, "\tp->%s |= (%s)buf[i++] << 48;\n", pm->name, cdecl);
+                p(f, "\tp->%s |= (%s)buf[i++] << 40;\n", pm->name, cdecl);
+                p(f, "\tp->%s |= (%s)buf[i++] << 32;\n", pm->name, cdecl);
+                p(f, "\tp->%s |= (%s)buf[i++] << 24;\n", pm->name, cdecl);
+                p(f, "\tp->%s |= (%s)buf[i++] << 16;\n", pm->name, cdecl);
+                p(f, "\tp->%s |= (%s)buf[i++] <<  8;\n", pm->name, cdecl);
                 p(f, "\tp->%s |= buf[i++];\n", pm->name);
                 p(f, "\n");
                 break;
