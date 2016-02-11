@@ -312,11 +312,11 @@ static struct map_type {
     { "d8",	"PRId8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtd8,           "int8_t %s",        	"int8_t",       	"int8_t" },
     { "d16","PRId16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtd16,          "int16_t %s",       	"int16_t",      	"int16_t" },
     { "d32","PRId32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtd32,          "int32_t %s",       	"int32_t",      	"int32_t" },
-    { "d64","PRId64",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtd64,          "int64_t %s",       	"int64_t",      	"int64_t" },
+    { "d64","PRId64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtd64,          "int64_t %s",       	"int64_t",      	"int64_t" },
     { "u8",	"PRIu8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtu8,           "uint8_t %s",       	"uint8_t",      	"uint8_t" },
     { "u16","PRIu16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtu16,          "uint16_t %s",      	"uint16_t",     	"uint16_t" },
     { "u32","PRIu32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtu32,          "uint32_t %s",      	"uint32_t",     	"uint32_t" },
-    { "u64","PRIu64",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtu64,          "uint64_t %s",      	"uint64_t",     	"uint64_t" },
+    { "u64","PRIu64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtu64,          "uint64_t %s",      	"uint64_t",     	"uint64_t" },
 
     { "f",	"\"f\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtFloat,	"float %s",		"float",		"float" },
     { "g",	"\"g\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtDouble,	"double %s",		"double",		"double" },
@@ -326,6 +326,9 @@ static struct map_type {
     { "lld","\"lld\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongInt,	"long %s",		"long long",		"long long" },
     { "llu","\"llu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongUint,	"unsigned long long %s", "unsigned long long",	"unsigned long long" },
 };
+
+static void p(FILE* f, const char* fmt, ...) 
+    __attribute__ ((format(printf, 2, 3)));
 
 static void p(FILE* f, const char* fmt, ...)
 {
@@ -1398,7 +1401,7 @@ static void define_write_xml(FILE *f)
         /* NOTE: Remember to test for null values */
         if (members[i].dt == dtCharPointer) {
             p(f, "	if(p->%s == NULL)\n", pm->name);
-            p(f,"		fprintf(f, \"\\t<%s></%s>\\n\");\n", pm->name, pm->name, pm->name);
+            p(f,"		fprintf(f, \"\\t<%s></%s>\\n\");\n", pm->name, pm->name);
             p(f,"	else\n");
             p(f,"		fprintf(f, \"\\t<%s>%%\" %s \"</%s>\\n\", p->%s);\n", pm->name, get_fmt(pm), pm->name, pm->name);
         }
@@ -1548,7 +1551,7 @@ static void generate_check_program(FILE* f)
         p(f, "	if( (f = fopen(\"%s.testing\", \"w\")) == NULL)\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
-        p(f, "	if(!%s_write(obj, f))\n");
+        p(f, "	if(!%s_write(obj, f))\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
         p(f, "	fclose(f);\n");
@@ -1557,7 +1560,7 @@ static void generate_check_program(FILE* f)
         p(f, "		return 77;\n");
         p(f, "\n");
         p(f, "	printf(\"Reading object from file\\n\");\n");
-        p(f, "	if(!%s_read(rwobj, f))\n");
+        p(f, "	if(!%s_read(rwobj, f))\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
         p(f, "	fclose(f);\n");
@@ -1569,7 +1572,7 @@ static void generate_check_program(FILE* f)
         p(f, "	if( (f = fopen(\"%s.testing\",\"w\")) == NULL)\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
-        p(f, "	if(!%s_write_xml(obj, f))\n");
+        p(f, "	if(!%s_write_xml(obj, f))\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
         p(f, "	fclose(f);\n");
@@ -1622,7 +1625,7 @@ static void generate_check_program(FILE* f)
         p(f, "			return 77;\n");
         p(f, "		}\n");
         p(f, "\n");
-        p(f, "		if(!%s_unpack(m2, buf, cb)) {\n");
+        p(f, "		if(!%s_unpack(m2, buf, cb)) {\n", g_name);
         p(f, "			fprintf(stderr, \"%s_unpack() failed\\n\");\n", g_name);
         p(f, "			return 77;\n");
         p(f, "		}\n");
@@ -2005,8 +2008,5 @@ int main(int argc, char* argv[])
     exit(EXIT_SUCCESS);
 }
 
-
-static void p(FILE* f, const char* fmt, ...) 
-    __attribute__ ((format(printf, 2, 3)));
 
 

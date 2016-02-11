@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS=subdir-objects
 
 AM_CFLAGS=\
 	-D_GNU_SOURCE \
-	-Winline -Wshadow -W -Wformat -Wall -pedantic -std=gnu99 -O
+	-Winline -Wshadow -W -Wformat -Wall -pedantic -std=gnu99 -O0 -ggdb
 
 bin_PROGRAMS=bf tcg nitfind nitpick find_unused_headers\
 	spaces find_odd_indentation find_duplicate_files\
