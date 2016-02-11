@@ -1142,7 +1142,7 @@ static void generate_header(void)
 
     /* Include stdint.h in the header if we use C99 datatypes */
     if (use_c99_types())
-        p(f, "#include <inttypes.h>\n");
+        p(f, "#include <stdint.h>\n");
 
     if (g_serialize || g_write_xml)
         p(f, "#include <stdio.h> /* for FILE* */\n");
@@ -1188,6 +1188,7 @@ static void add_standard_headers(FILE* f)
     p(f, "#include <assert.h>\n");
     p(f, "#include <string.h>\n");
     p(f, "#include <errno.h>\n");
+    p(f, "#include <inttypes.h>\n");
     p(f, "\n");
 
     p(f, "#include <%s>\n", filename("h"));
