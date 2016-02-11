@@ -1715,14 +1715,14 @@ static void generate_packfunc(FILE *f)
 
             case dtd64:
             case dtu64:
-                p(f, "\tbuf[i++] = (p->%s & 0xff00000000000000) >> 56;\n", pm->name);
-                p(f, "\tbuf[i++] = (p->%s & 0x00ff000000000000) >> 48;\n", pm->name);
-                p(f, "\tbuf[i++] = (p->%s & 0x0000ff0000000000) >> 40;\n", pm->name);
-                p(f, "\tbuf[i++] = (p->%s & 0x000000ff00000000) >> 32;\n", pm->name);
-                p(f, "\tbuf[i++] = (p->%s & 0x00000000ff000000) >> 24;\n", pm->name);
-                p(f, "\tbuf[i++] = (p->%s & 0x0000000000ff0000) >> 16;\n", pm->name);
-                p(f, "\tbuf[i++] = (p->%s & 0x000000000000ff00) >>  8;\n", pm->name);
-                p(f, "\tbuf[i++] = (p->%s & 0x00000000000000ff);\n", pm->name);
+                p(f, "\tbuf[i++] = (unsigned char)((p->%s & 0xff00000000000000) >> 56);\n", pm->name);
+                p(f, "\tbuf[i++] = (unsigned char)((p->%s & 0x00ff000000000000) >> 48);\n", pm->name);
+                p(f, "\tbuf[i++] = (unsigned char)((p->%s & 0x0000ff0000000000) >> 40);\n", pm->name);
+                p(f, "\tbuf[i++] = (unsigned char)((p->%s & 0x000000ff00000000) >> 32);\n", pm->name);
+                p(f, "\tbuf[i++] = (unsigned char)((p->%s & 0x00000000ff000000) >> 24);\n", pm->name);
+                p(f, "\tbuf[i++] = (unsigned char)((p->%s & 0x0000000000ff0000) >> 16);\n", pm->name);
+                p(f, "\tbuf[i++] = (unsigned char)((p->%s & 0x000000000000ff00) >>  8);\n", pm->name);
+                p(f, "\tbuf[i++] = (unsigned char)((p->%s & 0x00000000000000ff));\n", pm->name);
                 p(f, "\n");
                 break;
 
