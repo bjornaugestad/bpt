@@ -106,7 +106,7 @@ struct memberspec {
  */
 #define COPY_STRAIGHT   0
 #define COPY_PRESIZED   1
-#define COPY_PRESIZED_U 2
+#define COPY_PRESIZ_U   2
 #define COPY_STRCPY     3
 #define COPY_GRAB_PTR   4
 
@@ -116,23 +116,28 @@ static const char* assignment_templates[] = {
     "	assert(p != NULL);\n"
     "	p->%s = val;\n"
     ,
+
     /* Copy a string to a presized char array */
+    "	size_t n;\n"
+    "\n"
     "	assert(p != NULL);\n" 
     "	assert(val != NULL);\n" 
     "\n"
-    "	if(strlen(val) >= sizeof p->%s) {\n"
+    "	n = strlen(val) + 1;\n"
+    "	if (n > sizeof p->%s) {\n"
     "		errno = ENOSPC;\n"
     "		return 0;\n"
     "	}\n"
     "\n"
-    "	strcpy(p->%s, val);\n"
+    "	memcpy(p->%s, val, n);\n"
     "	return 1;\n"
     ,
+
     /* Copy a string to a presized unsigned char array */
     "	assert(p != NULL);\n" 
     "	assert(val != NULL);\n" 
     "\n"
-    "	if(strlen((const char*)val) >= sizeof p->%s) {\n"
+    "	if (strlen((const char*)val) >= sizeof p->%s) {\n"
     "		errno = ENOSPC;\n"
     "		return 0;\n"
     "	}\n"
@@ -145,7 +150,7 @@ static const char* assignment_templates[] = {
     "	assert(val != NULL);\n"
     "\n"
     "	free(p->%s);\n"
-    "	if( (p->%s = malloc(strlen(val) + 1)) == NULL)\n"
+    "	if ((p->%s = malloc(strlen(val) + 1)) == NULL)\n"
     "		return 0;\n"
     "\n"
     "	strcpy(p->%s, val);\n"
@@ -160,7 +165,8 @@ static const char* assignment_templates[] = {
 
 /*
  * used when we copy values from one instance to another,
- * as in foo_copy(foo dest, const foo src) */
+ * as in foo_copy(foo dest, const foo src) 
+ */
 const struct tmpl {
     int namecount; /* How many times do we print name? */
     const char* template;
@@ -178,19 +184,19 @@ const struct tmpl {
     },
 
     /* Copy presized unsigned char array */
-    {2,
-        "	strcpy(dest->%s, src->%s);\n" 
+    {3,
+        "	memcpy(dest->%s, src->%s, sizeof dest->%s);\n" 
         "\n"
     },
 
     /* Copy a char* to a char* */
-    {5,
+    {8,
         "	free(dest->%s);\n"
-        "   size_t n = strlen(src->%s) + 1;\n"
-        "	if( (dest->%s = malloc(n)) == NULL)\n"
+        "	size_t n%s = strlen(src->%s) + 1;\n"
+        "	if ((dest->%s = malloc(n%s)) == NULL)\n"
         "		return 0;\n"
         "\n"
-        "	memcpy(dest->%s, src->%s, n);\n"
+        "	memcpy(dest->%s, src->%s, n%s);\n"
         "\n"
     },
 
@@ -207,21 +213,21 @@ const struct tmpl {
 const struct tmpl write_templates[] = {
     /* COPY_STRAIGHT  */
     {2,
-        "	if(fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
         "		return 0;\n"
         "\n"
     },
 
     /* COPY_PRESIZED */
     {2,
-        "	if(fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
         "		return 0;\n"
         "\n"
     },
 
     /* COPY_PRESIZE_U */
     {2,
-        "	if(fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
         "		return 0;\n"
         "\n"
     },
@@ -229,13 +235,13 @@ const struct tmpl write_templates[] = {
     /* COPY_STRCPY, write a char* with a size_t length specifier first. */
     {2,
         "	/* Write length of string, then string excl the \\0 */\n"
-        "	if(p->%s == NULL)\n"
+        "	if (p->%s == NULL)\n"
         "		cb = 0;\n"
         "	else\n"
         "		cb = strlen(p->%s);\n"
-        "	if(fwrite(&cb, sizeof cb, 1, f) != 1)\n"
+        "	if (fwrite(&cb, sizeof cb, 1, f) != 1)\n"
         "		return 0;\n"
-        "	if(p->%s != NULL && fprintf(f, \"%%s\", p->%s) != (int)cb)\n"
+        "	if (p->%s != NULL && fprintf(f, \"%%s\", p->%s) != (int)cb)\n"
         "		return 0;\n"
         "\n"
     },
@@ -245,21 +251,21 @@ const struct tmpl write_templates[] = {
 const struct tmpl read_templates[] = {
     /* COPY_STRAIGHT  */
     {2,
-        "	if(fread(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fread(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
         "		return 0;\n"
         "\n"
     },
 
     /* COPY_PRESIZED */
     {2,
-        "	if(fread(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fread(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
         "		return 0;\n"
         "\n"
     },
 
     /* COPY_PRESIZE_U */
     {2,
-        "	if(fread(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fread(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
         "		return 0;\n"
         "\n"
     },
@@ -267,18 +273,18 @@ const struct tmpl read_templates[] = {
     /* COPY_STRCPY, read a char* with a size_t length specifier first. */
     {6,
         "	/* read length of string, then string excl the \\0 */\n"
-        "	if(fread(&cb, sizeof cb, 1, f) != 1)\n"
+        "	if (fread(&cb, sizeof cb, 1, f) != 1)\n"
         "		return 0;\n"
         "\n"
         "	free(p->%s); /* Free previous version. realloc() may work too. */\n"
-        "	if(cb == 0)\n"
+        "	if (cb == 0)\n"
         "		p->%s = NULL;\n"
         "	else {\n"
-        "		if( (p->%s = malloc(cb + 1)) == NULL)\n"
+        "		if ((p->%s = malloc(cb + 1)) == NULL)\n"
         "			return 0;\n"
         "\n"
         "		*p->%s = '\\0'; /* In case fread() fails */\n"
-        "		if(fread(p->%s, cb, 1, f) != cb)\n"
+        "		if (fread(p->%s, cb, 1, f) != cb)\n"
         "			return 0;\n"
         "		p->%s[cb] = '\\0';\n"
         "	}\n"
@@ -304,30 +310,31 @@ static struct map_type {
     const char* cparam; 	/* Param type for access functions(set) */
     const char* cret;	/* Return type for access functions (get) */
 } map[] = {
-    { "s",	"\"s\"",	1, 0, 1, 1, 1, 0, 1, COPY_PRESIZED,	dtCharArray,	"char %s[%lu]",		"const char*",		"const char*" },
-    { "S",	"\"s\"",	1, 0, 1, 1, 1, 0, 1, COPY_PRESIZED_U,	dtUCharArray,	"unsigned char %s[%lu]","const unsigned char*",	"const unsigned char*" },
-    { "s",	"\"s\"",	0, 1, 3, 1, 0, 0, 1, COPY_STRCPY,	dtCharPointer,	"char* %s",		"const char*",		"const char*" },
-    { "d",	"\"d\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtInt,			"int %s",		"int",			"int" },
-    { "t",	"\"t\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtTime_t,		"time_t %s",	"time_t",	"time_t" },
-    { "u",	"\"u\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtUint,			"unsigned int %s",	"unsigned int",		"unsigned int" },
-    { "z",	"\"zu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtSize_t,		"size_t %s",		"size_t",		"size_t" },
+    { "s",	"\"s\"",	1, 0, 1, 1, 1, 0, 1, COPY_PRESIZED,	dtCharArray,	"char %s[%lu]",				"const char*",			"const char*" },
+    { "S",	"\"s\"",	1, 0, 1, 1, 1, 0, 1, COPY_PRESIZ_U,	dtUCharArray,	"unsigned char %s[%lu]",	"const unsigned char*",	"const unsigned char*" },
+    { "s",	"\"s\"",	0, 1, 3, 1, 0, 0, 1, COPY_STRCPY,	dtCharPointer,	"char* %s",					"const char*",			"const char*" },
 
-    { "d8",	"PRId8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtd8,           "int8_t %s",        	"int8_t",       	"int8_t" },
-    { "d16","PRId16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtd16,          "int16_t %s",       	"int16_t",      	"int16_t" },
-    { "d32","PRId32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtd32,          "int32_t %s",       	"int32_t",      	"int32_t" },
-    { "d64","PRId64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtd64,          "int64_t %s",       	"int64_t",      	"int64_t" },
-    { "u8",	"PRIu8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtu8,           "uint8_t %s",       	"uint8_t",      	"uint8_t" },
-    { "u16","PRIu16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtu16,          "uint16_t %s",      	"uint16_t",     	"uint16_t" },
-    { "u32","PRIu32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtu32,          "uint32_t %s",      	"uint32_t",     	"uint32_t" },
-    { "u64","PRIu64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtu64,          "uint64_t %s",      	"uint64_t",     	"uint64_t" },
+    { "d",	"\"d\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtInt,			"int %s",					"int",				"int" },
+    { "t",	"\"t\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtTime_t,		"time_t %s",				"time_t",			"time_t" },
+    { "u",	"\"u\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtUint,			"unsigned int %s",			"unsigned int",		"unsigned int" },
+    { "z",	"\"zu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtSize_t,		"size_t %s",				"size_t",			"size_t" },
 
-    { "f",	"\"f\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtFloat,	"float %s",		"float",		"float" },
-    { "g",	"\"g\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtDouble,	"double %s",		"double",		"double" },
-    { "p",	"NONE",		0, 1, 3, 0, 0, 0, 0, COPY_GRAB_PTR,	dtVoidPointer,	"void* %s",		"void*",		"void*" },
-    { "ld",	"\"ld\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongInt,	"long %s",		"long",			"long" },
-    { "lu",	"\"lu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongUint,	"unsigned long %s",	"unsigned long",	"unsigned long" },
-    { "lld","\"lld\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongInt,	"long %s",		"long long",		"long long" },
-    { "llu","\"llu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongUint,	"unsigned long long %s", "unsigned long long",	"unsigned long long" },
+    { "d8",	"PRId8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtd8,			"int8_t %s",    "int8_t",   "int8_t" },
+    { "d16","PRId16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtd16,  		"int16_t %s",   "int16_t",  "int16_t" },
+    { "d32","PRId32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtd32,  		"int32_t %s",   "int32_t",  "int32_t" },
+    { "d64","PRId64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtd64,  		"int64_t %s",   "int64_t",  "int64_t" },
+    { "u8",	"PRIu8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtu8,   		"uint8_t %s",   "uint8_t",  "uint8_t" },
+    { "u16","PRIu16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtu16,  		"uint16_t %s",  "uint16_t", "uint16_t" },
+    { "u32","PRIu32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtu32,  		"uint32_t %s",  "uint32_t", "uint32_t" },
+    { "u64","PRIu64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtu64,  		"uint64_t %s",  "uint64_t", "uint64_t" },
+
+    { "f",	"\"f\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtFloat,		"float %s",				"float",				"float" },
+    { "g",	"\"g\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtDouble,   	"double %s",			"double",				"double" },
+    { "p",	"NONE",		0, 1, 3, 0, 0, 0, 0, COPY_GRAB_PTR,	dtVoidPointer,	"void* %s", 			"void*",				"void*" },
+    { "ld",	"\"ld\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongInt,  	"long %s",  			"long",					"long" },
+    { "lu",	"\"lu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongUint, 	"unsigned long %s", 	"unsigned long",		"unsigned long" },
+    { "lld","\"lld\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongInt,	"long %s",  			"long long",			"long long" },
+    { "llu","\"llu\"",  0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongUint,	"unsigned long long %s", "unsigned long long",	"unsigned long long" },
 };
 
 static void p(FILE* f, const char* fmt, ...) 
@@ -392,7 +399,7 @@ static void upper(char *s)
 
 struct map_type* lookup_map(struct memberspec* pm)
 {
-    size_t i, nelem = sizeof(map)/ sizeof(*map);
+    size_t i, nelem = sizeof map / sizeof *map;
     for (i = 0; i < nelem; i++) {
         if (map[i].dt == pm->dt) 
             return &map[i];
@@ -513,7 +520,7 @@ const char* get_fmt(struct memberspec *pm)
 static void map_type(const char* type, struct memberspec* pm)
 {
 
-    size_t i, nelem = sizeof(map)/ sizeof(*map);
+    size_t i, nelem = sizeof map / sizeof *map;
     for (i = 0; i < nelem; i++) {
         if (strcmp(map[i].type, type) == 0) {
             if ((map[i].sizespec && pm->size_specified)
@@ -540,7 +547,7 @@ static const char* get_spec_start(const char* s, size_t n)
     for (;;) {
         if (*s == ';')
             n--;
-        else if(*s == '\0') {
+        else if (*s == '\0') {
             /* Premature end of input */
             fprintf(stderr, "Syntax error in memberspec, premature end of input\n");
             exit(EXIT_FAILURE);
@@ -562,7 +569,7 @@ static void get_memberspec(const char* s, size_t i, struct memberspec* pm)
 
     s = get_spec_start(s, i);
     i = 0;
-    while (*s != '\0' && *s != '=' && i < sizeof(pm->name))
+    while (*s != '\0' && *s != '=' && i < sizeof pm->name)
         pm->name[i++] = *s++;
     pm->name[i] = '\0';
 
@@ -710,7 +717,7 @@ static void parse_options(int argc, char *argv[])
     int c;
     extern char* optarg;
 
-    while ( (c = getopt(argc, argv, "vhn:m:p:b:c:d:SCPMHFX")) != -1) {
+    while ((c = getopt(argc, argv, "vhn:m:p:b:c:d:SCPMHFX")) != -1) {
         switch (c) {
             case 'H':
                 g_hybrid = 1;
@@ -855,7 +862,7 @@ static void parse_memberspec(void)
      * (I know that we in theory could write to g_memberspec, but
      * that just isn't nice...)
      */
-    if ( (s = malloc(strlen(g_memberspec) + 1)) == NULL) {
+    if ((s = malloc(strlen(g_memberspec) + 1)) == NULL) {
         fprintf(stderr, "Out of memory\n");
         exit(EXIT_FAILURE);
     }
@@ -876,7 +883,7 @@ static FILE* open_file(const char* suffix)
 {
     FILE* f;
 
-    if ( (f = fopen(filename(suffix), "w")) == NULL) {
+    if ((f = fopen(filename(suffix), "w")) == NULL) {
         perror("fopen");
         exit(EXIT_FAILURE);
     }
@@ -1203,7 +1210,7 @@ static void define_ctor(FILE* f)
     p(f, "\n");
     
     /* Allocate memory for the object */
-    p(f, "\tif( (p = malloc(sizeof *p)) != NULL)\n");
+    p(f, "\tif ((p = malloc(sizeof *p)) != NULL)\n");
     p(f, "\t\t%s_init(p);\n", g_name);
     p(f, "\n");
     p(f, "\treturn p;\n");
@@ -1234,26 +1241,26 @@ static void define_init(FILE* f)
 
     p(f, "void %s_init(%s p)\n", g_name, g_name);
     p(f, "{\n");
-    p(f, "\tassert(p != NULL);\n");
+    p(f, "\tassert(p != NULL);\n\n");
 
     for (i = 0; i < nmembers; i++) {
         struct memberspec* pm = &members[i];
         int it = get_initializer_type(pm);
         switch (it) {
             case 0:
-                p(f, "\t\tp->%s = 0;\n", pm->name);
+                p(f, "\tp->%s = 0;\n", pm->name);
                 break;
 
             case 1:
-                p(f, "\t\tp->%s[0] = '\\0';\n", pm->name);
+                p(f, "\tp->%s[0] = '\\0';\n", pm->name);
                 break;
 
             case 2:
-                p(f, "\t\t*p->%s = '\\0';\n", pm->name);
+                p(f, "\t*p->%s = '\\0';\n", pm->name);
                 break;
 
             case 3:
-                p(f, "\t\tp->%s = NULL;\n", pm->name);
+                p(f, "\tp->%s = NULL;\n", pm->name);
                 break;
             default:
                 fprintf(stderr, "Unhandled initializer type(%d)\n", it);
@@ -1270,7 +1277,7 @@ static void define_dtor(FILE* f)
 
     p(f, "void %s_free(%s p)\n", g_name, g_name);
     p(f, "{\n");
-    p(f, "\tif(p != NULL) {\n");
+    p(f, "\tif (p != NULL) {\n");
     for (i = 0; i < nmembers; i++) {
         if (points_to_mem(&members[i]))
             p(f, "\t\tfree(p->%s);\n", members[i].name);
@@ -1299,7 +1306,7 @@ static void define_copy(FILE* f)
         (void)n;
 
         /* Ugly, but works. We just add more names than any format string uses. */
-        p(f, cc, pm->name, pm->name, pm->name, pm->name, pm->name, pm->name);
+        p(f, cc, pm->name, pm->name, pm->name, pm->name, pm->name, pm->name, pm->name, pm->name);
     }
     p(f, "\treturn 1;\n");
     p(f, "}\n");
@@ -1404,7 +1411,7 @@ static void define_write_xml(FILE *f)
 
         /* NOTE: Remember to test for null values */
         if (members[i].dt == dtCharPointer) {
-            p(f, "	if(p->%s == NULL)\n", pm->name);
+            p(f, "	if (p->%s == NULL)\n", pm->name);
             p(f,"		fprintf(f, \"\\t<%s></%s>\\n\");\n", pm->name, pm->name);
             p(f,"	else\n");
             p(f,"		fprintf(f, \"\\t<%s>%%\" %s \"</%s>\\n\", p->%s);\n", pm->name, get_fmt(pm), pm->name, pm->name);
@@ -1471,7 +1478,7 @@ static void generate_stack_interface(FILE *f)
 
     p(f, "void %s_free(%s p)\n", stackname, stackname);
     p(f, "{\n");
-    p(f, "	if(p != NULL) {\n");
+    p(f, "	if (p != NULL) {\n");
     p(f, "		free(p->data);\n");
     p(f, "		free(p);\n");
     p(f, "	}\n");
@@ -1483,10 +1490,10 @@ static void generate_stack_interface(FILE *f)
     p(f, "	assert(p != NULL);\n");
     p(f, "	assert(val != NULL);\n");
     p(f, "\n");
-    p(f, "	if(p->used == p->nelem) {\n");
+    p(f, "	if (p->used == p->nelem) {\n");
     p(f, "		size_t cb = p->nelem * sizeof *p->data * 2;\n");
     p(f, "		%s* tmp = realloc(p->data, cb);\n", g_name);
-    p(f, "		if(tmp == NULL)\n");
+    p(f, "		if (tmp == NULL)\n");
     p(f, "			return 0;\n");
     p(f, "		p->data = tmp;\n");
     p(f, "		p->nelem *= 2;\n");
@@ -1548,23 +1555,23 @@ static void generate_check_program(FILE* f)
     p(f, "	obj = %s_new();\n", g_name);
 
     if (g_serialize) {
-        p(f, "	if( (rwobj = %s()) == NULL)\n", ctor_name(g_name));
+        p(f, "	if ((rwobj = %s()) == NULL)\n", ctor_name(g_name));
         p(f, "		return 77;\n");
         p(f, "\n");
         p(f, "	printf(\"Writing object to file\\n\");\n");
-        p(f, "	if( (f = fopen(\"%s.testing\", \"w\")) == NULL)\n", g_name);
+        p(f, "	if ((f = fopen(\"%s.testing\", \"w\")) == NULL)\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
-        p(f, "	if(!%s_write(obj, f))\n", g_name);
+        p(f, "	if (!%s_write(obj, f))\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
         p(f, "	fclose(f);\n");
         p(f, "\n");
-        p(f, "	if( (f = fopen(\"%s.testing\", \"r\")) == NULL)\n", g_name);
+        p(f, "	if ((f = fopen(\"%s.testing\", \"r\")) == NULL)\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
         p(f, "	printf(\"Reading object from file\\n\");\n");
-        p(f, "	if(!%s_read(rwobj, f))\n", g_name);
+        p(f, "	if (!%s_read(rwobj, f))\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
         p(f, "	fclose(f);\n");
@@ -1573,10 +1580,10 @@ static void generate_check_program(FILE* f)
 
     if (g_write_xml) {
         p(f, "	/* Write the object as XML */\n");
-        p(f, "	if( (f = fopen(\"%s.testing\",\"w\")) == NULL)\n", g_name);
+        p(f, "	if ((f = fopen(\"%s.testing\",\"w\")) == NULL)\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
-        p(f, "	if(!%s_write_xml(obj, f))\n", g_name);
+        p(f, "	if (!%s_write_xml(obj, f))\n", g_name);
         p(f, "		return 77;\n");
         p(f, "\n");
         p(f, "	fclose(f);\n");
@@ -1624,17 +1631,17 @@ static void generate_check_program(FILE* f)
         p(f, "		size_t cb;\n");
         p(f, "		unsigned char buf[1024];\n");
         p(f, "\n");
-        p(f, "		if( (cb = %s_pack(m1, buf, sizeof buf)) == 0) {\n", g_name);
+        p(f, "		if ((cb = %s_pack(m1, buf, sizeof buf)) == 0) {\n", g_name);
         p(f, "			fprintf(stderr, \"%s_pack() failed\\n\");\n", g_name);
         p(f, "			return 77;\n");
         p(f, "		}\n");
         p(f, "\n");
-        p(f, "		if(!%s_unpack(m2, buf, cb)) {\n", g_name);
+        p(f, "		if (!%s_unpack(m2, buf, cb)) {\n", g_name);
         p(f, "			fprintf(stderr, \"%s_unpack() failed\\n\");\n", g_name);
         p(f, "			return 77;\n");
         p(f, "		}\n");
         p(f, "\n");
-        p(f, "		if(memcmp(m1, m2, sizeof *m1)) {\n");
+        p(f, "		if (memcmp(m1, m2, sizeof *m1)) {\n");
         p(f, "			fprintf(stderr, \"The two messages differ.\\n\");\n");
         p(f, "			return 77;\n");
         p(f, "		}\n");
@@ -1661,7 +1668,7 @@ static void generate_sizefunc(FILE *f)
     cbFixed = 0;
     for (i = 0; i < nmembers; i++) {
         if (can_pack(&members[i])) {
-            if ( (cb = pack_size(&members[i])) > 0)
+            if ((cb = pack_size(&members[i])) > 0)
                 cbFixed += cb;
         }
     }
@@ -1694,7 +1701,7 @@ static void generate_packfunc(FILE *f)
             case dtUCharArray:
             case dtCharArray:
                 p(f, "\tmemcpy(&buf[i], p->%s, sizeof p->%s);\n", pm->name, pm->name);
-                p(f, "\ti += sizeof(p->%s);\n", pm->name);
+                p(f, "\ti += sizeof p->%s;\n", pm->name);
                 p(f, "\n");
                 break;
 
@@ -1876,7 +1883,7 @@ static void create_one_manpage(
     strftime(date, sizeof date, "%b %d, %Y", ptm);
 
     sprintf(buf, "%s.3", func);
-    if ( (f = fopen(buf, "w")) == NULL) {
+    if ((f = fopen(buf, "w")) == NULL) {
         perror(buf);
         exit(EXIT_FAILURE);
     }
