@@ -120,7 +120,7 @@ static const char* assignment_templates[] = {
     "	assert(p != NULL);\n" 
     "	assert(val != NULL);\n" 
     "\n"
-    "	if(strlen(val) + 1 > sizeof p->%s) {\n"
+    "	if(strlen(val) >= sizeof p->%s) {\n"
     "		errno = ENOSPC;\n"
     "		return 0;\n"
     "	}\n"
@@ -132,7 +132,7 @@ static const char* assignment_templates[] = {
     "	assert(p != NULL);\n" 
     "	assert(val != NULL);\n" 
     "\n"
-    "	if(strlen((const char*)val) + 1 > sizeof p->%s) {\n"
+    "	if(strlen((const char*)val) >= sizeof p->%s) {\n"
     "		errno = ENOSPC;\n"
     "		return 0;\n"
     "	}\n"
@@ -158,7 +158,9 @@ static const char* assignment_templates[] = {
     "	p->%s = val;\n"
 };
 
-/* used when we copy values from one instance to another, as in foo_copy(foo dest, const foo src) */
+/*
+ * used when we copy values from one instance to another,
+ * as in foo_copy(foo dest, const foo src) */
 const struct tmpl {
     int namecount; /* How many times do we print name? */
     const char* template;
@@ -184,10 +186,11 @@ const struct tmpl {
     /* Copy a char* to a char* */
     {5,
         "	free(dest->%s);\n"
-        "	if( (dest->%s = malloc(strlen(src->%s) + 1)) == NULL)\n"
+        "   size_t n = strlen(src->%s) + 1;\n"
+        "	if( (dest->%s = malloc(n)) == NULL)\n"
         "		return 0;\n"
         "\n"
-        "	strcpy(dest->%s, src->%s);\n"
+        "	memcpy(dest->%s, src->%s, n);\n"
         "\n"
     },
 
@@ -1987,13 +1990,13 @@ static void generate_man_pages(void)
         create_one_manpage(g_name, c_return_value(pm), getter, parambuf, "World", "\n");
     }
 }
+
 static void generate_code(void)
 {
     generate_header();
     generate_implementation();
     generate_man_pages();
 }
-
 
 int main(int argc, char* argv[])
 {
@@ -2007,6 +2010,4 @@ int main(int argc, char* argv[])
 
     exit(EXIT_SUCCESS);
 }
-
-
 
