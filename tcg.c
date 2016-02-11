@@ -49,20 +49,6 @@ int g_man_pages = 0;
 int g_add_stack_interface = 0;
 int g_add_check_program = 0;
 
-/* Local helper functions */
-static int use_c99_types(void);
-static void show_usage(void);
-static void parse_options(int argc, char* argv[]);
-static void check_options(void);
-static void check_semantics(void);
-static void parse_memberspec(void);
-static void generate_code(void);
-static void generate_stack_interface(FILE *f);
-static void generate_packfunctions(FILE *f);
-static void p(FILE* f, const char* fmt, ...);
-static void generate_man_pages(void);
-static void add_copyright(FILE *f);
-
 /*
  * Data structure we use to store the memberspec after parsing.
  * We can have n members, each member has a name and a datatype
@@ -113,255 +99,6 @@ struct memberspec {
     int size_specified;
     size_t size;
 } members[ MEMBERS_MAX];
-
-int main(int argc, char* argv[])
-{
-
-    parse_options(argc, argv);
-    check_options();
-
-    parse_memberspec();
-    check_semantics();
-    generate_code();
-
-    exit(EXIT_SUCCESS);
-}
-
-static void show_usage(void)
-{
-    FILE *f = stdout;
-/* Odd indentation to make the actual text fit in a 80 col window */
-p(f, "tcg is short for Tiny Code Generator and is a program which creates\n");
-p(f, "an implementation of an abstract data type (ADT) in C.\n");
-p(f, "\n");
-p(f, "USAGE:\n");
-p(f, "   tcg options\n");
-p(f, "OPTIONS\n");
-p(f, "   -n name\n");
-p(f, "      Name of the ADT. \n");
-p(f, "\n");
-p(f, "   -m memberspec\n");
-p(f, "      Specifies the members in the ADT. We use (a slightly modified)\n");
-p(f, "      printf() syntax to specify the type of the members.\n");
-p(f, "      Each memberspec is *terminated* with a semicolon(;).\n");
-p(f, "         %%d   int\n");
-p(f, "         %%t   time_t\n");
-p(f, "         %%z   size_t\n");
-p(f, "         %%d8  C99 int8_t\n");
-p(f, "         %%d16 C99 int16_t\n");
-p(f, "         %%d32 C99 int32_t\n");
-p(f, "         %%d64 C99 int64_t\n");
-p(f, "         %%u   unsigned int\n");
-p(f, "         %%u8  C99 uint8_t\n");
-p(f, "         %%u16 C99 uint16_t\n");
-p(f, "         %%u32 C99 uint32_t\n");
-p(f, "         %%u64 C99 uint64_t\n");
-p(f, "         %%f   float\n");
-p(f, "         %%g   double\n");
-p(f, "         %%s   char*\n");
-p(f, "         %%Ns  char array, where N is number of characters including\n");
-p(f, "               the '\\0' string terminator.\n");
-p(f, "         %%p   pointer to void.\n");
-p(f, "      Example:\n");
-p(f, "         -m \"name=%%20s;age=%%d;average_salary=%%g;\"\n");
-p(f, "\n");
-p(f, "   -p prefix\n");
-p(f, "      A prefix to be used in the guard macro name. If the ADT is\n");
-p(f, "      named foo, a guard macro will be named FOO_H unless a prefix\n");
-p(f, "      is used as well. If the prefix is MYLIB, the guard will be \n");
-p(f, "      named MYLIB_FOO_H\n");
-p(f, "\n");
-p(f, "   -b basename\n");
-p(f, "      tcg will create two files, a header file and a c file. The\n");
-p(f, "      basename for these files will be the same as the name of\n");
-p(f, "      the adt unless -b basename is used.\n");
-p(f, "\n");
-p(f, "   -C\n");
-p(f, "      Generate a check program, which will test the ADT.\n");
-p(f, "\n");
-p(f, "   -H\n");
-p(f, "     Create a hybrid ADT, where the struct definition is in the header file,\n");
-p(f, "     along with the normal typedef. A hybrid ADT will also implement all\n");
-p(f, "     access functions as inline functions in the header file.\n");
-p(f, "\n");
-p(f, "   -P\n");
-p(f, "     Generate pack functions. When this option is used, three functions\n");
-p(f, "     are added to the ADT. These three functions will be named adtname_pack(),\n");
-p(f, "     adtname_unpack() and adtname_packsize(). Not that not all data types\n");
-p(f, "     can be packed into a char buffer, only char arrays and the C99 fixed\n");
-p(f, "     size integers(intX_t and uintX_t) will be packed/unpacked and included\n");
-p(f, "     in the size computation. The reason is that we only pack data types\n");
-p(f, "     we can represent on all platforms.\n");
-p(f, "     char[] members will be packed with exact max length, including\n");
-p(f, "     the trailing zero.\n");
-p(f, "     We do not use the ntohl() function(and friends) since we want\n");
-p(f, "     the code to work on non-POSIX platforms. For now we always do\n");
-p(f, "     the conversion to/from NBO.\n");
-p(f, "\n");
-p(f, "   -v Set verbose flag\n");
-p(f, "\n");
-p(f, "   -h Print this text\n");
-p(f, "\n");
-p(f, "   -c copyright. Add copyright notice.\n");
-p(f, "\n");
-p(f, "   -S\n");
-p(f, "     Add a type safe stack interface\n");
-p(f, "   -M\n");
-p(f, "     Add man page templates for the member functions\n");
-p(f, "   -F\n");
-p(f, "     Add functions to read and write the ADT from/to a FILE*\n");
-p(f, "   -X\n");
-p(f, "     Add functions to write the ADT to a FILE*, formatted as XML\n");
-p(f, "\n");
-}
-
-static void parse_options(int argc, char *argv[])
-{
-    int c;
-    extern char* optarg;
-
-    while ( (c = getopt(argc, argv, "vhn:m:p:b:c:d:SCPMHFX")) != -1) {
-        switch (c) {
-            case 'H':
-                g_hybrid = 1;
-                break;
-
-            case 'v':
-                g_verbose = 1;
-                break;
-
-            case 'M':
-                g_man_pages = 1;
-                break;
-
-            case 'n':
-                g_name = optarg;
-                break;
-
-            case 'm':
-                g_memberspec = optarg;
-                break;
-
-            case 'p':
-                g_prefix = optarg;
-                break;
-
-            case 'b':
-                g_basename = optarg;
-                break;
-
-            case 'c':
-                g_copyright = optarg;
-                break;
-
-            case 'S':
-                g_add_stack_interface = 1;
-                break;
-
-            case 'C':
-                g_add_check_program = 1;
-                break;
-
-            case 'P':
-                g_generate_packfunctions = 1;
-                break;
-
-            case 'F':
-                g_serialize = 1;
-                break;
-
-            case 'X':
-                g_write_xml = 1;
-                break;
-
-            case 'h':
-                show_usage();
-                exit(EXIT_SUCCESS);
-
-            default:
-                show_usage();
-                exit(EXIT_FAILURE);
-        }
-    }
-}
-
-/* check that all the params we need was provided */
-static void check_options(void)
-{
-    int ok = 1;
-    if (g_name == NULL || strlen(g_name) == 0) {
-        fprintf(stderr, "-n name is required\n");
-        ok = 0;
-    }
-
-    #if 0
-    /* We now allow empty structs */
-    if (g_memberspec == NULL || strlen(g_memberspec) == 0) {
-        fprintf(stderr, "-m memberspec is required\n");
-        ok = 0;
-    }
-    #endif
-
-    if (!ok) 
-        exit(EXIT_FAILURE);
-}
-
-/* Count the number of memberspecs in s */
-static size_t count_memberspecs(const char* s)
-{
-    size_t n = 0;
-
-    while (*s != '\0') {
-        if (*s == ';')
-            n++;
-        s++;
-    }
-
-    return n;
-}
-
-static const char* ltrim(const char* s)
-{
-    while (isspace((unsigned char)*s))
-        s++;
-
-    return s;
-}
-
-/* Remove trailing spaces */
-static void rtrim(char *s)
-{
-    size_t i = strlen(s);
-    if (i > 0) {
-        i--;
-        while (i > 0 && isspace((unsigned char)s[i]))
-            s[i--] = '\0';
-    }
-}
-
-/* Return a pointer to the start of the n'th memberspec in the string s 
- * The first character of the name == start of spec.
- */
-const char* get_spec_start(const char* s, size_t n)
-{
-    /* The first spec starts here */
-    if (n == 0)
-        return s;
-    
-    for (;;) {
-        if (*s == ';')
-            n--;
-        else if(*s == '\0') {
-            /* Premature end of input */
-            fprintf(stderr, "Syntax error in memberspec, premature end of input\n");
-            exit(EXIT_FAILURE);
-        }
-
-        s++;
-        if (n == 0)
-            return s;
-    }
-}
 
 /* DO NOT CHANGE THE VALUES OF THE LITERALS BELOW.
  * They are used as array index values and changing them will crash everything.
@@ -546,6 +283,7 @@ const struct tmpl read_templates[] = {
     },
     { 0, "WTF am I doing here?" }
 };
+
 static struct map_type {
     const char* type;	/* s,i, lu, et al */
     const char* fmt;	/* printf() format string */
@@ -589,6 +327,62 @@ static struct map_type {
     { "llu","\"llu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongUint,	"unsigned long long %s", "unsigned long long",	"unsigned long long" },
 };
 
+static void p(FILE* f, const char* fmt, ...)
+{
+    int rc;
+    va_list ap;
+
+    va_start(ap, fmt);
+    rc = vfprintf(f, fmt, ap);
+    va_end(ap);
+
+    if (rc <= 0) {
+        perror("vfprintf");
+        exit(EXIT_FAILURE);
+    }
+}
+
+
+static const char* ltrim(const char* s)
+{
+    while (isspace((unsigned char)*s))
+        s++;
+
+    return s;
+}
+
+/* Remove trailing spaces */
+static void rtrim(char *s)
+{
+    size_t i = strlen(s);
+    if (i > 0) {
+        i--;
+        while (i > 0 && isspace((unsigned char)s[i]))
+            s[i--] = '\0';
+    }
+}
+
+static const char* filename(const char* suffix)
+{
+    const char *s;
+    static char sz[10000];
+    if (g_basename != NULL)
+        s = g_basename;
+    else 
+        s = g_name;
+
+    sprintf(sz, "%s.%s", s, suffix);
+    return sz;
+}
+
+static void upper(char *s)
+{
+    while (*s != '\0') {
+        if (islower((unsigned char)*s))
+            *s = toupper((unsigned char)*s);
+        s++;
+    }
+}
 
 struct map_type* lookup_map(struct memberspec* pm)
 {
@@ -728,6 +522,30 @@ static void map_type(const char* type, struct memberspec* pm)
     exit(EXIT_FAILURE);
 }
 
+/* Return a pointer to the start of the n'th memberspec in the string s 
+ * The first character of the name == start of spec.
+ */
+static const char* get_spec_start(const char* s, size_t n)
+{
+    /* The first spec starts here */
+    if (n == 0)
+        return s;
+    
+    for (;;) {
+        if (*s == ';')
+            n--;
+        else if(*s == '\0') {
+            /* Premature end of input */
+            fprintf(stderr, "Syntax error in memberspec, premature end of input\n");
+            exit(EXIT_FAILURE);
+        }
+
+        s++;
+        if (n == 0)
+            return s;
+    }
+}
+
 static void get_memberspec(const char* s, size_t i, struct memberspec* pm)
 {
     char type[200] = "";
@@ -774,6 +592,243 @@ static void get_memberspec(const char* s, size_t i, struct memberspec* pm)
     map_type(type, pm);
 }
 
+static int use_c99_types(void)
+{
+    size_t i;
+
+    for (i = 0; i < nmembers; i++) {
+        if (members[i].dt == dtd8
+        || members[i].dt == dtd16
+        || members[i].dt == dtd32
+        || members[i].dt == dtd64
+        || members[i].dt == dtu8
+        || members[i].dt == dtu16
+        || members[i].dt == dtu32
+        || members[i].dt == dtu64)
+            return 1;
+    }
+
+    return 0;
+}
+
+static void show_usage(void)
+{
+    FILE *f = stdout;
+/* Odd indentation to make the actual text fit in a 80 col window */
+p(f, "tcg is short for Tiny Code Generator and is a program which creates\n");
+p(f, "an implementation of an abstract data type (ADT) in C.\n");
+p(f, "\n");
+p(f, "USAGE:\n");
+p(f, "   tcg options\n");
+p(f, "OPTIONS\n");
+p(f, "   -n name\n");
+p(f, "      Name of the ADT. \n");
+p(f, "\n");
+p(f, "   -m memberspec\n");
+p(f, "      Specifies the members in the ADT. We use (a slightly modified)\n");
+p(f, "      printf() syntax to specify the type of the members.\n");
+p(f, "      Each memberspec is *terminated* with a semicolon(;).\n");
+p(f, "         %%d   int\n");
+p(f, "         %%t   time_t\n");
+p(f, "         %%z   size_t\n");
+p(f, "         %%d8  C99 int8_t\n");
+p(f, "         %%d16 C99 int16_t\n");
+p(f, "         %%d32 C99 int32_t\n");
+p(f, "         %%d64 C99 int64_t\n");
+p(f, "         %%u   unsigned int\n");
+p(f, "         %%u8  C99 uint8_t\n");
+p(f, "         %%u16 C99 uint16_t\n");
+p(f, "         %%u32 C99 uint32_t\n");
+p(f, "         %%u64 C99 uint64_t\n");
+p(f, "         %%f   float\n");
+p(f, "         %%g   double\n");
+p(f, "         %%s   char*\n");
+p(f, "         %%Ns  char array, where N is number of characters including\n");
+p(f, "               the '\\0' string terminator.\n");
+p(f, "         %%p   pointer to void.\n");
+p(f, "      Example:\n");
+p(f, "         -m \"name=%%20s;age=%%d;average_salary=%%g;\"\n");
+p(f, "\n");
+p(f, "   -p prefix\n");
+p(f, "      A prefix to be used in the guard macro name. If the ADT is\n");
+p(f, "      named foo, a guard macro will be named FOO_H unless a prefix\n");
+p(f, "      is used as well. If the prefix is MYLIB, the guard will be \n");
+p(f, "      named MYLIB_FOO_H\n");
+p(f, "\n");
+p(f, "   -b basename\n");
+p(f, "      tcg will create two files, a header file and a c file. The\n");
+p(f, "      basename for these files will be the same as the name of\n");
+p(f, "      the adt unless -b basename is used.\n");
+p(f, "\n");
+p(f, "   -C\n");
+p(f, "      Generate a check program, which will test the ADT.\n");
+p(f, "\n");
+p(f, "   -H\n");
+p(f, "     Create a hybrid ADT, where the struct definition is in the header file,\n");
+p(f, "     along with the normal typedef. A hybrid ADT will also implement all\n");
+p(f, "     access functions as inline functions in the header file.\n");
+p(f, "\n");
+p(f, "   -P\n");
+p(f, "     Generate pack functions. When this option is used, three functions\n");
+p(f, "     are added to the ADT. These three functions will be named adtname_pack(),\n");
+p(f, "     adtname_unpack() and adtname_packsize(). Not that not all data types\n");
+p(f, "     can be packed into a char buffer, only char arrays and the C99 fixed\n");
+p(f, "     size integers(intX_t and uintX_t) will be packed/unpacked and included\n");
+p(f, "     in the size computation. The reason is that we only pack data types\n");
+p(f, "     we can represent on all platforms.\n");
+p(f, "     char[] members will be packed with exact max length, including\n");
+p(f, "     the trailing zero.\n");
+p(f, "     We do not use the ntohl() function(and friends) since we want\n");
+p(f, "     the code to work on non-POSIX platforms. For now we always do\n");
+p(f, "     the conversion to/from NBO.\n");
+p(f, "\n");
+p(f, "   -v Set verbose flag\n");
+p(f, "\n");
+p(f, "   -h Print this text\n");
+p(f, "\n");
+p(f, "   -c copyright. Add copyright notice.\n");
+p(f, "\n");
+p(f, "   -S\n");
+p(f, "     Add a type safe stack interface\n");
+p(f, "   -M\n");
+p(f, "     Add man page templates for the member functions\n");
+p(f, "   -F\n");
+p(f, "     Add functions to read and write the ADT from/to a FILE*\n");
+p(f, "   -X\n");
+p(f, "     Add functions to write the ADT to a FILE*, formatted as XML\n");
+p(f, "\n");
+}
+
+static void parse_options(int argc, char *argv[])
+{
+    int c;
+    extern char* optarg;
+
+    while ( (c = getopt(argc, argv, "vhn:m:p:b:c:d:SCPMHFX")) != -1) {
+        switch (c) {
+            case 'H':
+                g_hybrid = 1;
+                break;
+
+            case 'v':
+                g_verbose = 1;
+                break;
+
+            case 'M':
+                g_man_pages = 1;
+                break;
+
+            case 'n':
+                g_name = optarg;
+                break;
+
+            case 'm':
+                g_memberspec = optarg;
+                break;
+
+            case 'p':
+                g_prefix = optarg;
+                break;
+
+            case 'b':
+                g_basename = optarg;
+                break;
+
+            case 'c':
+                g_copyright = optarg;
+                break;
+
+            case 'S':
+                g_add_stack_interface = 1;
+                break;
+
+            case 'C':
+                g_add_check_program = 1;
+                break;
+
+            case 'P':
+                g_generate_packfunctions = 1;
+                break;
+
+            case 'F':
+                g_serialize = 1;
+                break;
+
+            case 'X':
+                g_write_xml = 1;
+                break;
+
+            case 'h':
+                show_usage();
+                exit(EXIT_SUCCESS);
+
+            default:
+                show_usage();
+                exit(EXIT_FAILURE);
+        }
+    }
+}
+
+/* check that all the params we need was provided */
+static void check_options(void)
+{
+    int ok = 1;
+    if (g_name == NULL || strlen(g_name) == 0) {
+        fprintf(stderr, "-n name is required\n");
+        ok = 0;
+    }
+
+    #if 0
+    /* We now allow empty structs */
+    if (g_memberspec == NULL || strlen(g_memberspec) == 0) {
+        fprintf(stderr, "-m memberspec is required\n");
+        ok = 0;
+    }
+    #endif
+
+    if (!ok) 
+        exit(EXIT_FAILURE);
+}
+
+/* Check stuff and warn the user if we find inconsistencies or errors */
+static void check_semantics(void)
+{
+    /* Warn if we want to pack structs with unpackable members */
+    size_t i;
+
+    if (g_generate_packfunctions) {
+        for (i = 0; i < nmembers; i++) {
+            if (!can_pack(&members[i])) {
+                fprintf(stderr, "warning: The member %s cannot be packed\n",
+                    members[i].name);
+            }
+        }
+    }
+
+    /* We cannot serialize void* members as we do not know their sizes */
+    if (g_serialize || g_write_xml) {
+        for (i = 0; i < nmembers; i++) {
+            if (!can_serialize(&members[i])) 
+                fprintf(stderr, "warning: The member %s cannot be serialized\n",
+                    members[i].name);
+        }
+    }
+}
+
+/* Count the number of memberspecs in s */
+static size_t count_memberspecs(const char* s)
+{
+    size_t n = 0;
+
+    while (*s != '\0') {
+        if (*s == ';')
+            n++;
+        s++;
+    }
+
+    return n;
+}
+
 /* Parse the memberspec string and add the members to the members array.
  * Die if an error occurs or the input is invalid. The parsing itself is
  * straight forward. Each member is specified like this: name=typespec
@@ -811,45 +866,59 @@ static void parse_memberspec(void)
     }
 }
 
-static const char* filename(const char* suffix)
+static FILE* open_file(const char* suffix)
 {
-    const char *s;
-    static char sz[10000];
-    if (g_basename != NULL)
-        s = g_basename;
-    else 
-        s = g_name;
+    FILE* f;
 
-    sprintf(sz, "%s.%s", s, suffix);
-    return sz;
+    if ( (f = fopen(filename(suffix), "w")) == NULL) {
+        perror("fopen");
+        exit(EXIT_FAILURE);
+    }
+
+    return f;
 }
 
-static void upper(char *s)
+static void add_guard_start(FILE *f)
 {
-    while (*s != '\0') {
-        if (islower((unsigned char)*s))
-            *s = toupper((unsigned char)*s);
-        s++;
-    }
+    char guard[10000];
+
+    /* Create the proper guard */
+    if (g_prefix != NULL)
+        sprintf(guard, "%s_%s_H", g_prefix, g_name);
+    else
+        sprintf(guard, "%s_H", g_name);
+
+    upper(guard);
+
+    /* guard start */
+    p(f, "#ifndef %s\n#define %s\n\n", guard, guard);
 }
 
-static void define_struct(FILE* f)
+static void add_guard_end(FILE *f)
 {
-    size_t i;
+    /* guard end */
+    p(f, "#endif /* guard */\n");
+}
 
-    p(f, "/* Definition of the %s ADT */\n", g_name);
-    p(f, "struct %s_tag {\n", g_name);
-    for (i = 0; i < nmembers; i++) {
-        struct memberspec* pm = &members[i];
-        p(f, "\t");
-        if (pm->size_specified)
-            p(f, get_cdecl(pm), pm->name, (unsigned long)pm->size);
-        else
-            p(f, get_cdecl(pm), pm->name);
+static void add_cplusplus_wrapper_start(FILE *f)
+{
+    /* C++ wrapper start */
+    p(f, "#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
+}
 
-        p(f, ";\n");
-    }
-    p(f, "};\n\n");
+static void add_cplusplus_wrapper_end(FILE *f)
+{
+    p(f, "#ifdef __cplusplus\n}\n#endif\n\n");
+}
+
+
+static void add_adt_declarations(FILE *f)
+{
+    p(f, "/* The ADT(s) we declare */\n");
+    p(f, "typedef struct %s_tag* %s;\n", g_name, g_name);
+    if (g_add_stack_interface)
+        p(f, "typedef struct %s_stack_tag* %s_stack;\n", g_name, g_name);
+    p(f, "\n");
 }
 
 static const char* getter_name(const char* adt, const char* member)
@@ -942,49 +1011,31 @@ static void declare_setters_and_getters(FILE *f)
     p(f, "\n");
 }
 
-FILE* open_file(const char* suffix)
+static void add_setters_and_getters(FILE *f)
 {
-    FILE* f;
-
-    if ( (f = fopen(filename(suffix), "w")) == NULL) {
-        perror("fopen");
-        exit(EXIT_FAILURE);
-    }
-
-    return f;
-}
-
-static void add_guard_start(FILE *f)
-{
-    char guard[10000];
-
-    /* Create the proper guard */
-    if (g_prefix != NULL)
-        sprintf(guard, "%s_%s_H", g_prefix, g_name);
+    if (g_hybrid) 
+        define_setters_and_getters(f);
     else
-        sprintf(guard, "%s_H", g_name);
-
-    upper(guard);
-
-    /* guard start */
-    p(f, "#ifndef %s\n#define %s\n\n", guard, guard);
+        declare_setters_and_getters(f);
 }
 
-static void add_guard_end(FILE *f)
+static void define_struct(FILE* f)
 {
-    /* guard end */
-    p(f, "#endif /* guard */\n");
-}
+    size_t i;
 
-static void add_cplusplus_wrapper_start(FILE *f)
-{
-    /* C++ wrapper start */
-    p(f, "#ifdef __cplusplus\nextern \"C\" {\n#endif\n\n");
-}
+    p(f, "/* Definition of the %s ADT */\n", g_name);
+    p(f, "struct %s_tag {\n", g_name);
+    for (i = 0; i < nmembers; i++) {
+        struct memberspec* pm = &members[i];
+        p(f, "\t");
+        if (pm->size_specified)
+            p(f, get_cdecl(pm), pm->name, (unsigned long)pm->size);
+        else
+            p(f, get_cdecl(pm), pm->name);
 
-static void add_cplusplus_wrapper_end(FILE *f)
-{
-    p(f, "#ifdef __cplusplus\n}\n#endif\n\n");
+        p(f, ";\n");
+    }
+    p(f, "};\n\n");
 }
 
 static const char* ctor_name(const char* adt)
@@ -1008,22 +1059,21 @@ static const char* copy_name(const char* adt)
     return buf;
 }
 
-static void add_stack_declaration(FILE *f)
-{
-    if (g_add_stack_interface) {
-        char stackname[10000];
-        sprintf(stackname, "%s_stack", g_name);
-        const char* ctor = ctor_name(stackname);
-        const char* dtor = dtor_name(stackname);
 
-        p(f, "/* stack interface for the %s ADT */\n", g_name);
-        p(f, "%s %s(void);\n", stackname, ctor);
-        p(f, "void %s(%s p);\n", dtor, stackname);
-        p(f, "int %s_push(%s p, %s val);\n", stackname, stackname, g_name);
-        p(f, "void %s_pop(%s p);\n", stackname, stackname);
-        p(f, "%s %s_top(%s p);\n", g_name, stackname, stackname);
-        p(f, "\n");
-    }
+static void add_standard_function_declarations(FILE *f)
+{
+    const char* ctor = ctor_name(g_name);
+    const char* dtor = dtor_name(g_name);
+    const char* copy = copy_name(g_name);
+
+    p(f, "/* constructor and destructor for the %s ADT */\n", g_name);
+    p(f, "%s %s(void);\n", g_name, ctor);
+    p(f, "void %s(%s p);\n", dtor, g_name);
+    p(f, "void %s_init(%s p);\n", g_name, g_name);
+    p(f, "%s %s_inplace_new(void *mem);\n", g_name, g_name);
+
+    p(f, "int %s(%s dest, const %s src);\n", copy, g_name, g_name);
+    p(f, "\n");
 }
 
 static void add_pack_declarations(FILE *f)
@@ -1051,38 +1101,30 @@ static void add_serialize_declarations(FILE *f)
     }
 }
 
-static void add_standard_function_declarations(FILE *f)
+static void add_stack_declaration(FILE *f)
 {
-    const char* ctor = ctor_name(g_name);
-    const char* dtor = dtor_name(g_name);
-    const char* copy = copy_name(g_name);
+    if (g_add_stack_interface) {
+        char stackname[10000];
+        sprintf(stackname, "%s_stack", g_name);
+        const char* ctor = ctor_name(stackname);
+        const char* dtor = dtor_name(stackname);
 
-    p(f, "/* constructor and destructor for the %s ADT */\n", g_name);
-    p(f, "%s %s(void);\n", g_name, ctor);
-    p(f, "void %s(%s p);\n", dtor, g_name);
-    p(f, "void %s_init(%s p);\n", g_name, g_name);
-    p(f, "%s %s_inplace_new(void *mem);\n", g_name, g_name);
-
-    p(f, "int %s(%s dest, const %s src);\n", copy, g_name, g_name);
-    p(f, "\n");
+        p(f, "/* stack interface for the %s ADT */\n", g_name);
+        p(f, "%s %s(void);\n", stackname, ctor);
+        p(f, "void %s(%s p);\n", dtor, stackname);
+        p(f, "int %s_push(%s p, %s val);\n", stackname, stackname, g_name);
+        p(f, "void %s_pop(%s p);\n", stackname, stackname);
+        p(f, "%s %s_top(%s p);\n", g_name, stackname, stackname);
+        p(f, "\n");
+    }
 }
 
-static void add_adt_declarations(FILE *f)
+static void add_copyright(FILE *f)
 {
-    p(f, "/* The ADT(s) we declare */\n");
-    p(f, "typedef struct %s_tag* %s;\n", g_name, g_name);
-    if (g_add_stack_interface)
-        p(f, "typedef struct %s_stack_tag* %s_stack;\n", g_name, g_name);
-    p(f, "\n");
+    if (g_copyright != NULL)
+        p(f, "/* %s */\n\n", g_copyright);
 }
 
-static void add_setters_and_getters(FILE *f)
-{
-    if (g_hybrid) 
-        define_setters_and_getters(f);
-    else
-        declare_setters_and_getters(f);
-}
 
 static void generate_header(void)
 {
@@ -1132,142 +1174,19 @@ static void generate_header(void)
     fclose(f);
 }
 
-static void generate_check_program(FILE* f)
+static void add_standard_headers(FILE* f)
 {
-    char sz[10000];
-    char stk[10000];
-
-    if (!g_add_check_program) 
-        return;
-
-    sprintf(sz, "%s_CHECK", g_name);
-    upper(sz);
-
-    sprintf(stk, "%s_stack", g_name);
-
-    p(f, "#ifdef %s\n", sz);
-    p(f, "int main(void)\n");
-    p(f, "{\n");
-
-    if (g_serialize || g_write_xml) 
-        p(f, "	FILE *f;\n");
-
-    if (g_serialize) {
-        p(f, "	%s rwobj;\n", g_name);
-        p(f, "\n");
-    }
-
-    if (g_add_stack_interface) {
-        p(f, "	size_t i, nelem = 10;\n");
-        p(f, "	%s stk;\n", stk);
-    }
-
-    p(f, "	%s obj;\n", g_name);
-    p(f, "	obj = %s_new();\n", g_name);
-
-    if (g_serialize) {
-        p(f, "	if( (rwobj = %s()) == NULL)\n", ctor_name(g_name));
-        p(f, "		return 77;\n");
-        p(f, "\n");
-        p(f, "	printf(\"Writing object to file\\n\");\n");
-        p(f, "	if( (f = fopen(\"%s.testing\", \"w\")) == NULL)\n", g_name);
-        p(f, "		return 77;\n");
-        p(f, "\n");
-        p(f, "	if(!%s_write(obj, f))\n");
-        p(f, "		return 77;\n");
-        p(f, "\n");
-        p(f, "	fclose(f);\n");
-        p(f, "\n");
-        p(f, "	if( (f = fopen(\"%s.testing\", \"r\")) == NULL)\n", g_name);
-        p(f, "		return 77;\n");
-        p(f, "\n");
-        p(f, "	printf(\"Reading object from file\\n\");\n");
-        p(f, "	if(!%s_read(rwobj, f))\n");
-        p(f, "		return 77;\n");
-        p(f, "\n");
-        p(f, "	fclose(f);\n");
-        p(f, "\n");
-    }
-
-    if (g_write_xml) {
-        p(f, "	/* Write the object as XML */\n");
-        p(f, "	if( (f = fopen(\"%s.testing\",\"w\")) == NULL)\n", g_name);
-        p(f, "		return 77;\n");
-        p(f, "\n");
-        p(f, "	if(!%s_write_xml(obj, f))\n");
-        p(f, "		return 77;\n");
-        p(f, "\n");
-        p(f, "	fclose(f);\n");
-        p(f, "\n");
-    }
-
-    /* Free the read/write test object */
-    if (g_serialize) 
-        p(f, "	%s(rwobj);\n", dtor_name(g_name));
-
-    p(f, "	%s_free(obj);\n", g_name);
+    /* Add the standard headers we always include */
+    p(f, "#include <stdlib.h>\n");
+    p(f, "#include <stdio.h>\n");
+    p(f, "#include <assert.h>\n");
+    p(f, "#include <string.h>\n");
+    p(f, "#include <errno.h>\n");
     p(f, "\n");
 
-    if (g_add_stack_interface) {
-        p(f, "	/* Testing stack interface */\n");
-        p(f, "	stk = %s_new();\n", stk);
-        p(f, "	assert(stk != NULL);\n");
-        p(f, "\n");
-
-        p(f, "	for(i = 0; i < nelem; i++) {\n");
-        p(f, "		int rc;\n");
-        p(f, "		obj = %s_new();\n", g_name);
-        p(f, "		assert(obj != NULL);\n");
-        p(f, "		rc = %s_push(stk, obj);\n", stk);
-        p(f, "		assert(rc != 0);\n");
-        p(f, "		printf(\"Item %%lu added\\n\", (unsigned long)i);\n");
-        p(f, "	}\n");
-        p(f, "\n");
-        p(f, "	for(i = nelem; i-- > 0; ) {\n");
-        p(f, "		obj = %s_top(stk);\n", stk);
-        p(f, "		assert(obj != NULL);\n");
-        p(f, "		%s_free(obj);\n", g_name);
-        p(f, "		%s_pop(stk);\n", stk);
-        p(f, "		printf(\"Item %%lu popped\\n\", (unsigned long)i);\n");
-        p(f, "	}\n");
-
-        p(f, "	%s_free(stk);\n", stk);
-        p(f, "	\n");
-    }
-
-    if (g_generate_packfunctions && g_memberspec != NULL) {
-        p(f, "	/* Testing pack() and unpack() functions */\n");
-        p(f, "	{\n");
-        p(f, "		%s m1 = %s_new(), m2 = %s_new();\n", g_name, g_name, g_name);
-        p(f, "		size_t cb;\n");
-        p(f, "		unsigned char buf[1024];\n");
-        p(f, "\n");
-        p(f, "		if( (cb = %s_pack(m1, buf, sizeof buf)) == 0) {\n", g_name);
-        p(f, "			fprintf(stderr, \"%s_pack() failed\\n\");\n", g_name);
-        p(f, "			return 77;\n");
-        p(f, "		}\n");
-        p(f, "\n");
-        p(f, "		if(!%s_unpack(m2, buf, cb)) {\n");
-        p(f, "			fprintf(stderr, \"%s_unpack() failed\\n\");\n", g_name);
-        p(f, "			return 77;\n");
-        p(f, "		}\n");
-        p(f, "\n");
-        p(f, "		if(memcmp(m1, m2, sizeof *m1)) {\n");
-        p(f, "			fprintf(stderr, \"The two messages differ.\\n\");\n");
-        p(f, "			return 77;\n");
-        p(f, "		}\n");
-        p(f, "\n");
-        p(f, "		%s_free(m1);\n", g_name);
-        p(f, "		%s_free(m2);\n", g_name);
-        p(f, "	}\n");
-        p(f, "\n");
-    }
-
-    p(f, "\treturn EXIT_SUCCESS;\n");
-    p(f, "}\n");
-    p(f, "#endif\n");
+    p(f, "#include <%s>\n", filename("h"));
+    p(f, "\n");
 }
-
 
 static void define_ctor(FILE* f)
 {
@@ -1419,41 +1338,6 @@ static void define_write(FILE *f)
     p(f, "\n");
 }
 
-static void define_write_xml(FILE *f)
-{
-    size_t i;
-
-    p(f, "int %s_write_xml(%s p, FILE* f)\n", g_name, g_name);
-    p(f, "{\n");
-    p(f, "	assert(p != NULL);\n");
-    p(f, "	assert(f != NULL);\n");
-    p(f, "\n");
-
-    p(f, "	fprintf(f, \"<%s>\\n\");\n", g_name);
-
-    /* Copy each member */
-    for (i = 0; i < nmembers; i++) {
-        struct memberspec* pm = &members[i];
-        if (!can_serialize(pm))
-            continue;
-
-        /* NOTE: Remember to test for null values */
-        if (members[i].dt == dtCharPointer) {
-            p(f, "	if(p->%s == NULL)\n", pm->name);
-            p(f,"		fprintf(f, \"\\t<%s></%s>\\n\");\n", pm->name, pm->name, pm->name);
-            p(f,"	else\n");
-            p(f,"		fprintf(f, \"\\t<%s>%%\" %s \"</%s>\\n\", p->%s);\n", pm->name, get_fmt(pm), pm->name, pm->name);
-        }
-        else
-            p(f,"	fprintf(f, \"\\t<%s>%%\" %s \"</%s>\\n\", p->%s);\n", pm->name, get_fmt(pm), pm->name, pm->name);
-    }
-    p(f, "	fprintf(f, \"</%s>\\n\");\n", g_name);
-    p(f, "\treturn 1;\n");
-    p(f, "}\n");
-    p(f, "\n");
-}
-
-
 static void define_read(FILE *f)
 {
     size_t i;
@@ -1493,6 +1377,40 @@ static void define_read(FILE *f)
     p(f, "\n");
 }
 
+static void define_write_xml(FILE *f)
+{
+    size_t i;
+
+    p(f, "int %s_write_xml(%s p, FILE* f)\n", g_name, g_name);
+    p(f, "{\n");
+    p(f, "	assert(p != NULL);\n");
+    p(f, "	assert(f != NULL);\n");
+    p(f, "\n");
+
+    p(f, "	fprintf(f, \"<%s>\\n\");\n", g_name);
+
+    /* Copy each member */
+    for (i = 0; i < nmembers; i++) {
+        struct memberspec* pm = &members[i];
+        if (!can_serialize(pm))
+            continue;
+
+        /* NOTE: Remember to test for null values */
+        if (members[i].dt == dtCharPointer) {
+            p(f, "	if(p->%s == NULL)\n", pm->name);
+            p(f,"		fprintf(f, \"\\t<%s></%s>\\n\");\n", pm->name, pm->name, pm->name);
+            p(f,"	else\n");
+            p(f,"		fprintf(f, \"\\t<%s>%%\" %s \"</%s>\\n\", p->%s);\n", pm->name, get_fmt(pm), pm->name, pm->name);
+        }
+        else
+            p(f,"	fprintf(f, \"\\t<%s>%%\" %s \"</%s>\\n\", p->%s);\n", pm->name, get_fmt(pm), pm->name, pm->name);
+    }
+    p(f, "	fprintf(f, \"</%s>\\n\");\n", g_name);
+    p(f, "\treturn 1;\n");
+    p(f, "}\n");
+    p(f, "\n");
+}
+
 static void add_serialize_definitions(FILE *f)
 {
     if (g_serialize) {
@@ -1503,98 +1421,6 @@ static void add_serialize_definitions(FILE *f)
     if (g_write_xml) {
         define_write_xml(f);
     }
-}
-
-static void add_copyright(FILE *f)
-{
-    if (g_copyright != NULL)
-        p(f, "/* %s */\n\n", g_copyright);
-}
-
-static void add_standard_headers(FILE* f)
-{
-    /* Add the standard headers we always include */
-    p(f, "#include <stdlib.h>\n");
-    p(f, "#include <stdio.h>\n");
-    p(f, "#include <assert.h>\n");
-    p(f, "#include <string.h>\n");
-    p(f, "#include <errno.h>\n");
-    p(f, "\n");
-
-    p(f, "#include <%s>\n", filename("h"));
-    p(f, "\n");
-}
-
-static void generate_implementation(void)
-{
-    FILE *f;
-
-    f = open_file("c");
-    add_copyright(f);
-    add_standard_headers(f);
-
-    if (!g_hybrid) 
-        define_struct(f);
-
-    define_ctor(f);
-    define_inplace_ctor(f);
-    define_init(f);
-    define_dtor(f);
-    define_copy(f);
-
-    /* Now for the access(get) functions */
-    if (!g_hybrid)
-        define_setters_and_getters(f);
-
-    add_serialize_definitions(f);
-    generate_stack_interface(f);
-    generate_packfunctions(f);
-    generate_check_program(f);
-    fclose(f);
-}
-
-static void generate_code(void)
-{
-    generate_header();
-    generate_implementation();
-    generate_man_pages();
-}
-
-static void p(FILE* f, const char* fmt, ...) 
-    __attribute__ ((format(printf, 2, 3)));
-
-static void p(FILE* f, const char* fmt, ...)
-{
-    int rc;
-    va_list ap;
-
-    va_start(ap, fmt);
-    rc = vfprintf(f, fmt, ap);
-    va_end(ap);
-
-    if (rc <= 0) {
-        perror("vfprintf");
-        exit(EXIT_FAILURE);
-    }
-}
-
-static int use_c99_types(void)
-{
-    size_t i;
-
-    for (i = 0; i < nmembers; i++) {
-        if (members[i].dt == dtd8
-        || members[i].dt == dtd16
-        || members[i].dt == dtd32
-        || members[i].dt == dtd64
-        || members[i].dt == dtu8
-        || members[i].dt == dtu16
-        || members[i].dt == dtu32
-        || members[i].dt == dtu64)
-            return 1;
-    }
-
-    return 0;
 }
 
 static void generate_stack_interface(FILE *f)
@@ -1681,6 +1507,163 @@ static void generate_stack_interface(FILE *f)
 
 }
 
+static void generate_check_program(FILE* f)
+{
+    char sz[10000];
+    char stk[10000];
+
+    if (!g_add_check_program) 
+        return;
+
+    sprintf(sz, "%s_CHECK", g_name);
+    upper(sz);
+
+    sprintf(stk, "%s_stack", g_name);
+
+    p(f, "#ifdef %s\n", sz);
+    p(f, "int main(void)\n");
+    p(f, "{\n");
+
+    if (g_serialize || g_write_xml) 
+        p(f, "	FILE *f;\n");
+
+    if (g_serialize) {
+        p(f, "	%s rwobj;\n", g_name);
+        p(f, "\n");
+    }
+
+    if (g_add_stack_interface) {
+        p(f, "	size_t i, nelem = 10;\n");
+        p(f, "	%s stk;\n", stk);
+    }
+
+    p(f, "	%s obj;\n", g_name);
+    p(f, "	obj = %s_new();\n", g_name);
+
+    if (g_serialize) {
+        p(f, "	if( (rwobj = %s()) == NULL)\n", ctor_name(g_name));
+        p(f, "		return 77;\n");
+        p(f, "\n");
+        p(f, "	printf(\"Writing object to file\\n\");\n");
+        p(f, "	if( (f = fopen(\"%s.testing\", \"w\")) == NULL)\n", g_name);
+        p(f, "		return 77;\n");
+        p(f, "\n");
+        p(f, "	if(!%s_write(obj, f))\n");
+        p(f, "		return 77;\n");
+        p(f, "\n");
+        p(f, "	fclose(f);\n");
+        p(f, "\n");
+        p(f, "	if( (f = fopen(\"%s.testing\", \"r\")) == NULL)\n", g_name);
+        p(f, "		return 77;\n");
+        p(f, "\n");
+        p(f, "	printf(\"Reading object from file\\n\");\n");
+        p(f, "	if(!%s_read(rwobj, f))\n");
+        p(f, "		return 77;\n");
+        p(f, "\n");
+        p(f, "	fclose(f);\n");
+        p(f, "\n");
+    }
+
+    if (g_write_xml) {
+        p(f, "	/* Write the object as XML */\n");
+        p(f, "	if( (f = fopen(\"%s.testing\",\"w\")) == NULL)\n", g_name);
+        p(f, "		return 77;\n");
+        p(f, "\n");
+        p(f, "	if(!%s_write_xml(obj, f))\n");
+        p(f, "		return 77;\n");
+        p(f, "\n");
+        p(f, "	fclose(f);\n");
+        p(f, "\n");
+    }
+
+    /* Free the read/write test object */
+    if (g_serialize) 
+        p(f, "	%s(rwobj);\n", dtor_name(g_name));
+
+    p(f, "	%s_free(obj);\n", g_name);
+    p(f, "\n");
+
+    if (g_add_stack_interface) {
+        p(f, "	/* Testing stack interface */\n");
+        p(f, "	stk = %s_new();\n", stk);
+        p(f, "	assert(stk != NULL);\n");
+        p(f, "\n");
+
+        p(f, "	for(i = 0; i < nelem; i++) {\n");
+        p(f, "		int rc;\n");
+        p(f, "		obj = %s_new();\n", g_name);
+        p(f, "		assert(obj != NULL);\n");
+        p(f, "		rc = %s_push(stk, obj);\n", stk);
+        p(f, "		assert(rc != 0);\n");
+        p(f, "		printf(\"Item %%lu added\\n\", (unsigned long)i);\n");
+        p(f, "	}\n");
+        p(f, "\n");
+        p(f, "	for(i = nelem; i-- > 0; ) {\n");
+        p(f, "		obj = %s_top(stk);\n", stk);
+        p(f, "		assert(obj != NULL);\n");
+        p(f, "		%s_free(obj);\n", g_name);
+        p(f, "		%s_pop(stk);\n", stk);
+        p(f, "		printf(\"Item %%lu popped\\n\", (unsigned long)i);\n");
+        p(f, "	}\n");
+
+        p(f, "	%s_free(stk);\n", stk);
+        p(f, "	\n");
+    }
+
+    if (g_generate_packfunctions && g_memberspec != NULL) {
+        p(f, "	/* Testing pack() and unpack() functions */\n");
+        p(f, "	{\n");
+        p(f, "		%s m1 = %s_new(), m2 = %s_new();\n", g_name, g_name, g_name);
+        p(f, "		size_t cb;\n");
+        p(f, "		unsigned char buf[1024];\n");
+        p(f, "\n");
+        p(f, "		if( (cb = %s_pack(m1, buf, sizeof buf)) == 0) {\n", g_name);
+        p(f, "			fprintf(stderr, \"%s_pack() failed\\n\");\n", g_name);
+        p(f, "			return 77;\n");
+        p(f, "		}\n");
+        p(f, "\n");
+        p(f, "		if(!%s_unpack(m2, buf, cb)) {\n");
+        p(f, "			fprintf(stderr, \"%s_unpack() failed\\n\");\n", g_name);
+        p(f, "			return 77;\n");
+        p(f, "		}\n");
+        p(f, "\n");
+        p(f, "		if(memcmp(m1, m2, sizeof *m1)) {\n");
+        p(f, "			fprintf(stderr, \"The two messages differ.\\n\");\n");
+        p(f, "			return 77;\n");
+        p(f, "		}\n");
+        p(f, "\n");
+        p(f, "		%s_free(m1);\n", g_name);
+        p(f, "		%s_free(m2);\n", g_name);
+        p(f, "	}\n");
+        p(f, "\n");
+    }
+
+    p(f, "\treturn EXIT_SUCCESS;\n");
+    p(f, "}\n");
+    p(f, "#endif\n");
+}
+
+static void generate_sizefunc(FILE *f)
+{
+    size_t i, cb, cbFixed;
+    
+    p(f, "size_t %s_packsize(void)\n", g_name);
+    p(f, "{\n");
+
+    /* Compute size of fixed size members */
+    cbFixed = 0;
+    for (i = 0; i < nmembers; i++) {
+        if (can_pack(&members[i])) {
+            if ( (cb = pack_size(&members[i])) > 0)
+                cbFixed += cb;
+        }
+    }
+
+    p(f, "\t/* Size of fixed size members */\n");
+    p(f, "\tsize_t cb = %zu;\n", cbFixed);
+    p(f, "\treturn cb;\n");
+    p(f, "}\n\n");
+}
 
 /* Here we create functions that either pack or unpack the data members into a buffer.  */
 static void generate_packfunc(FILE *f)
@@ -1830,28 +1813,6 @@ static void generate_unpackfunc(FILE *f)
     p(f, "\n");
 }
 
-static void generate_sizefunc(FILE *f)
-{
-    size_t i, cb, cbFixed;
-    
-    p(f, "size_t %s_packsize(void)\n", g_name);
-    p(f, "{\n");
-
-    /* Compute size of fixed size members */
-    cbFixed = 0;
-    for (i = 0; i < nmembers; i++) {
-        if (can_pack(&members[i])) {
-            if ( (cb = pack_size(&members[i])) > 0)
-                cbFixed += cb;
-        }
-    }
-
-    p(f, "\t/* Size of fixed size members */\n");
-    p(f, "\tsize_t cb = %zu;\n", cbFixed);
-    p(f, "\treturn cb;\n");
-    p(f, "}\n\n");
-}
-
 static void generate_packfunctions(FILE *f)
 {
     if (g_generate_packfunctions) {
@@ -1861,29 +1822,32 @@ static void generate_packfunctions(FILE *f)
     }
 }
 
-/* Check stuff and warn the user if we find inconsistencies or errors */
-static void check_semantics(void)
+static void generate_implementation(void)
 {
-    /* Warn if we want to pack structs with unpackable members */
-    size_t i;
+    FILE *f;
 
-    if (g_generate_packfunctions) {
-        for (i = 0; i < nmembers; i++) {
-            if (!can_pack(&members[i])) {
-                fprintf(stderr, "warning: The member %s cannot be packed\n",
-                    members[i].name);
-            }
-        }
-    }
+    f = open_file("c");
+    add_copyright(f);
+    add_standard_headers(f);
 
-    /* We cannot serialize void* members as we do not know their sizes */
-    if (g_serialize || g_write_xml) {
-        for (i = 0; i < nmembers; i++) {
-            if (!can_serialize(&members[i])) 
-                fprintf(stderr, "warning: The member %s cannot be serialized\n",
-                    members[i].name);
-        }
-    }
+    if (!g_hybrid) 
+        define_struct(f);
+
+    define_ctor(f);
+    define_inplace_ctor(f);
+    define_init(f);
+    define_dtor(f);
+    define_copy(f);
+
+    /* Now for the access(get) functions */
+    if (!g_hybrid)
+        define_setters_and_getters(f);
+
+    add_serialize_definitions(f);
+    generate_stack_interface(f);
+    generate_packfunctions(f);
+    generate_check_program(f);
+    fclose(f);
 }
 
 static void create_one_manpage(
@@ -1935,7 +1899,6 @@ static void create_one_manpage(
     p(f, ".An Your name goes here\n");
     fclose(f);
 }
-
 
 static void create_ctor_manpage(void)
 {
@@ -2021,3 +1984,29 @@ static void generate_man_pages(void)
         create_one_manpage(g_name, c_return_value(pm), getter, parambuf, "World", "\n");
     }
 }
+static void generate_code(void)
+{
+    generate_header();
+    generate_implementation();
+    generate_man_pages();
+}
+
+
+int main(int argc, char* argv[])
+{
+
+    parse_options(argc, argv);
+    check_options();
+
+    parse_memberspec();
+    check_semantics();
+    generate_code();
+
+    exit(EXIT_SUCCESS);
+}
+
+
+static void p(FILE* f, const char* fmt, ...) 
+    __attribute__ ((format(printf, 2, 3)));
+
+
