@@ -36,6 +36,7 @@ const char* g_copyright = NULL;
 
 int g_generate_comment_template = 0;
 int g_generate_packfunctions = 0;
+int g_generate_db_functions = 0;
 int g_serialize = 0;
 int g_write_xml = 0;
 int g_verbose = 0;
@@ -707,6 +708,8 @@ p(f, "   -M\n");
 p(f, "     Add man page templates for the member functions\n");
 p(f, "   -F\n");
 p(f, "     Add functions to read and write the ADT from/to a FILE*\n");
+p(f, "   -D\n");
+p(f, "     Add functions to read and write the ADT from/to a Berkeley DB file\n");
 p(f, "   -X\n");
 p(f, "     Add functions to write the ADT to a FILE*, formatted as XML\n");
 p(f, "\n");
@@ -717,7 +720,7 @@ static void parse_options(int argc, char *argv[])
     int c;
     extern char* optarg;
 
-    while ((c = getopt(argc, argv, "vhn:m:p:b:c:d:SCPMHFX")) != -1) {
+    while ((c = getopt(argc, argv, "vhn:m:p:b:c:d:SCDPMHFX")) != -1) {
         switch (c) {
             case 'H':
                 g_hybrid = 1;
@@ -763,6 +766,10 @@ static void parse_options(int argc, char *argv[])
                 g_generate_packfunctions = 1;
                 break;
 
+            case 'D':
+                g_generate_db_functions = 1;
+                break;
+
             case 'F':
                 g_serialize = 1;
                 break;
@@ -791,13 +798,11 @@ static void check_options(void)
         ok = 0;
     }
 
-    #if 0
     /* We now allow empty structs */
     if (g_memberspec == NULL || strlen(g_memberspec) == 0) {
         fprintf(stderr, "-m memberspec is required\n");
         ok = 0;
     }
-    #endif
 
     if (!ok) 
         exit(EXIT_FAILURE);
@@ -910,7 +915,7 @@ static void add_guard_start(FILE *f)
 static void add_guard_end(FILE *f)
 {
     /* guard end */
-    p(f, "#endif /* guard */\n");
+    p(f, "#endif\n");
 }
 
 static void add_cplusplus_wrapper_start(FILE *f)
@@ -1196,6 +1201,9 @@ static void add_standard_headers(FILE* f)
     p(f, "#include <string.h>\n");
     p(f, "#include <errno.h>\n");
     p(f, "#include <inttypes.h>\n");
+
+    if (generate_db_functions)
+        p(f, "#include <db.h>\n");
     p(f, "\n");
 
     p(f, "#include <%s>\n", filename("h"));
@@ -1827,6 +1835,12 @@ static void generate_unpackfunc(FILE *f)
     p(f, "\n");
 }
 
+static void generate_db_functions(FILE *f)
+{
+    (void)f;
+}
+
+
 static void generate_packfunctions(FILE *f)
 {
     if (g_generate_packfunctions) {
@@ -1860,6 +1874,7 @@ static void generate_implementation(void)
     add_serialize_definitions(f);
     generate_stack_interface(f);
     generate_packfunctions(f);
+    generate_db_functions(f);
     generate_check_program(f);
     fclose(f);
 }
