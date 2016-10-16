@@ -10,6 +10,7 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 
 # Checks for header files.
+AC_CHECK_HEADERS([gcrypt.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 
