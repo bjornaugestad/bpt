@@ -1202,7 +1202,7 @@ static void add_standard_headers(FILE* f)
     p(f, "#include <errno.h>\n");
     p(f, "#include <inttypes.h>\n");
 
-    if (generate_db_functions)
+    if (g_generate_db_functions)
         p(f, "#include <db.h>\n");
     p(f, "\n");
 
