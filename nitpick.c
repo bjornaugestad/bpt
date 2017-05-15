@@ -280,7 +280,8 @@ static void usage(const char *name)
         "-r Fix return-statements with ()\n"
         "-k Add spaces after keywords\n"
         "-t Replace one TAB with four spaces\n"
-        "-e Fix blank line at end of file\n";
+        "-e Fix blank line at end of file\n"
+        "-a all of the above\n";
 
     printf(text, name);
 }
@@ -295,21 +296,27 @@ static void parse_commandline(int argc, char *argv[])
             case 'w':
                 fix_ws = 1;
                 break;
+
             case 'n':
                 fix_newlines = 1;
                 break;
+
             case 'r':
                 fix_return = 1;
                 break;
+
             case 'k':
                 fix_keywords = 1;
                 break;
+
             case 't':
                 fix_tabs = 1;
                 break;
+
             case 'h':
                 usage(argv[0]);
                 exit(0);
+
             case 'e':
                 fix_end_of_file = 1;
                 break;
@@ -320,6 +327,7 @@ static void parse_commandline(int argc, char *argv[])
                 fix_keywords = 1;
                 fix_tabs = 1;
                 fix_end_of_file = 1;
+                fix_ws = 1;
                 break;
 
             default:
