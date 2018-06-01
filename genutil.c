@@ -31,7 +31,7 @@ static void show_usage(void)
         "",
         "The -h and -v options will always be added.",
         "",
-        "example: genutil -a -o xz: foo",
+        "example: genutil -c -o xz: foo",
         "example: genutil -o xz: foo",
     };
     size_t i, n = sizeof text / sizeof *text;
@@ -190,6 +190,7 @@ static void add_show_usage(FILE *f)
     static const char *src[] = {
         "static void show_usage(void)",
         "{",
+        "    // TODO: add usage text",
         "    static const char *text[] = {",
         "        \"usage: add your own text here\",",
         "        \"\",",
@@ -252,8 +253,10 @@ static void add_commandline_parsing(FILE *f)
         fprintf(f, "            case '%c':\n", c);
         if (*s == ':') {
             s++;
-            fprintf(f, "                // '%c' expects an argument. Remember to read optarg\n", c);
+            fprintf(f, "                // TODO: '%c' expects an argument. read optarg\n", c);
         }
+        else
+            fprintf(f, "                // TODO: Handle the arg somehow\n");
 
         fprintf(f, "                break;\n");
         fprintf(f, "\n");
@@ -281,7 +284,7 @@ static void add_main(FILE *f)
         fprintf(f, "    read_configfile();\n");
     }
     fprintf(f, "\n");
-    fprintf(f, "    /* Add functionality here. */\n");
+    fprintf(f, "    // TODO: Add functionality here.\n");
     fprintf(f, "\n");
     fprintf(f, "    exit(0);\n");
     fprintf(f, "}\n");
@@ -305,7 +308,7 @@ static void add_configfile(FILE *f)
     fprintf(f, "    }\n");
     fprintf(f, "\n");
     fprintf(f, "    while (fgets(line, sizeof line, f)) {\n");
-    fprintf(f, "        /* process line. */\n");
+    fprintf(f, "        // TODO: process line.\n");
     fprintf(f, "    }\n");
     fprintf(f, "\n");
     fprintf(f, "    fclose(f);\n");
