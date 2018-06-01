@@ -178,7 +178,7 @@ static void parse_command_line(int argc, char *argv[])
     }
 }
 
-int callback(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+int callback(const char *fpath, const struct stat *sb, int typeflag __attribute__((unused)), struct FTW *ftwbuf __attribute__((unused)))
 {
     int fd = -1, algo = GCRY_MD_SHA1;
     size_t digestsize = gcry_md_get_algo_dlen(algo);
@@ -281,7 +281,7 @@ static int cmp(const void *v1, const void *v2)
 static void sort_results(void)
 {
     if (verbose)
-        printf("Sorting %zu found files\n", nentries_used);
+        fprintf(stderr, "Sorting %zu found files\n", nentries_used);
 
     qsort(entries, nentries_used, sizeof *entries, cmp);
 }
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
     // to locate duplicates.
     for (i = 1; i < nentries_used; i++) {
         if (strcmp(entries[i - 1].hash, entries[i].hash) == 0) 
-            printf("%s %s\n", entries[i - 1].fpath, entries[i].fpath);
+            printf("%s\t%s\n", entries[i - 1].fpath, entries[i].fpath);
     }
 
     return 0;
