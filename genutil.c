@@ -2,7 +2,7 @@
  * genutil - generate commandline utility skeleton.
  *
  * Rationale: Over and over again, I write small utility programs.
- * These programs tend to be very similar, so I can save a lot of 
+ * These programs tend to be very similar, so I can save a lot of
  * time generating a skeleton implementation. This program does
  * that.
  *
@@ -46,7 +46,7 @@ static void parse_commandline(int argc, char *argv[])
     const char *opts = "o:c";
 
     while ((c = getopt(argc, argv, opts)) != EOF) {
-        switch(c) {
+        switch (c) {
             case 'c':
                 configfile_support = 1;
                 break;
@@ -60,7 +60,7 @@ static void parse_commandline(int argc, char *argv[])
             default:
                 show_usage();
                 exit(1);
-                
+
         }
     }
 
@@ -109,7 +109,7 @@ static const char *includes[] = {
     "unistd.h",
     "errno.h",
 };
-    
+
 static void add_includes(FILE *f)
 {
     size_t i, n;
@@ -142,7 +142,7 @@ static void add_die_and_warning(FILE *f)
     n = sizeof die / sizeof *die;
     for (i = 0; i < n; i++)
         fprintf(f, "%s\n", die[i]);
-    
+
     static const char *warning[] = {
 	"__attribute__((format(printf,1,2)))",
         "static void warning(const char *fmt, ...)",
@@ -179,7 +179,7 @@ static void add_verbose(FILE *f)
         "}",
         "",
     };
-    
+
     size_t i, n = sizeof verbose / sizeof *verbose;
     for (i = 0; i < n; i++)
         fprintf(f, "%s\n", verbose[i]);
@@ -205,7 +205,7 @@ static void add_show_usage(FILE *f)
     };
 
     size_t i, n = sizeof src / sizeof *src;
-    for (i = 0; i < n; i++) 
+    for (i = 0; i < n; i++)
         fprintf(f, "%s\n", src[i]);
 }
 
@@ -248,7 +248,7 @@ static void add_commandline_parsing(FILE *f)
 
         // already handled
         if (c == 'h' || c == 'v')
-            continue; 
+            continue;
 
         fprintf(f, "            case '%c':\n", c);
         if (*s == ':') {
@@ -355,4 +355,3 @@ int main(int argc, char *argv[])
     generate_code();
     return 1;
 }
-

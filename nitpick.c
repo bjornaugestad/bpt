@@ -157,7 +157,7 @@ static void remove_trailing_ws(char *s)
     i = strlen(s);
 
     if (!fix_ws) {
-        /* Just remove the \n so that the later fprintf() doesn't 
+        /* Just remove the \n so that the later fprintf() doesn't
          * print two newlines. */
         if (i-- && s[i] == '\n')
             s[i] = '\0';

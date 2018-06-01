@@ -8,7 +8,7 @@
 #include <time.h>
 
 /*
-TODO: 
+TODO:
 - Add support for serializing functions to FILE*. OK.
 - Add man page. OK
 - Add GPL licence text to outfile
@@ -16,14 +16,14 @@ TODO:
 - Consider changing stdint.h to inttypes.h. OK
 - Maybe add collection interfaces and types for storing objects in collections.
   We already have the stack interface, how about list(and maybe set and tree)?
-  (Hmm, the meta_list ADT has so many member functions compared to the meta_stack 
+  (Hmm, the meta_list ADT has so many member functions compared to the meta_stack
   ADT. Making the generated list interface type safe would be a real PITA.
 - Maybe, just maybe, add support for postgres I/O
-- TODO 20071209: Maybe add inplace constructors and init() functions? Nice on 
+- TODO 20071209: Maybe add inplace constructors and init() functions? Nice on
   embedded targets with special mem handling.
 */
 
-/* DONE 
+/* DONE
  * Added support for hybrid ADT's and static inline setters/getters. See -H.
  */
 
@@ -88,12 +88,12 @@ enum datatype {
 
 /*
  * Here we store the member specification.
- * Big note (20070114): 
+ * Big note (20070114):
  * Support for BerkeleyDB is brand new and probably broken, hehe.
- * It's easy to generate the db code itself, the hard part is 
+ * It's easy to generate the db code itself, the hard part is
  * to handle keys without resorting to a huge framework.
  */
-size_t nmembers = 0; 
+size_t nmembers = 0;
 struct memberspec {
     char name[MEMBERNAME_MAX + 1];
     enum datatype dt;
@@ -121,8 +121,8 @@ static const char* assignment_templates[] = {
     /* Copy a string to a presized char array */
     "	size_t n;\n"
     "\n"
-    "	assert(p != NULL);\n" 
-    "	assert(val != NULL);\n" 
+    "	assert(p != NULL);\n"
+    "	assert(val != NULL);\n"
     "\n"
     "	n = strlen(val) + 1;\n"
     "	if (n > sizeof p->%s) {\n"
@@ -135,8 +135,8 @@ static const char* assignment_templates[] = {
     ,
 
     /* Copy a string to a presized unsigned char array */
-    "	assert(p != NULL);\n" 
-    "	assert(val != NULL);\n" 
+    "	assert(p != NULL);\n"
+    "	assert(val != NULL);\n"
     "\n"
     "	if (strlen((const char*)val) >= sizeof p->%s) {\n"
     "		errno = ENOSPC;\n"
@@ -147,7 +147,7 @@ static const char* assignment_templates[] = {
     "	return 1;\n"
     ,
     /* Copy a string to a char pointer */
-    "	assert(p != NULL);\n" 
+    "	assert(p != NULL);\n"
     "	assert(val != NULL);\n"
     "\n"
     "	free(p->%s);\n"
@@ -157,16 +157,16 @@ static const char* assignment_templates[] = {
     "	strcpy(p->%s, val);\n"
     "	return 1;\n"
     ,
-    /* Copy a pointer by freeing the previous version 
+    /* Copy a pointer by freeing the previous version
      * and then just assigning the new version */
-    "	assert(p != NULL);\n" 
+    "	assert(p != NULL);\n"
     "	free(p->%s);\n"
     "	p->%s = val;\n"
 };
 
 /*
  * used when we copy values from one instance to another,
- * as in foo_copy(foo dest, const foo src) 
+ * as in foo_copy(foo dest, const foo src)
  */
 const struct tmpl {
     int namecount; /* How many times do we print name? */
@@ -174,19 +174,19 @@ const struct tmpl {
 } copy_templates[] = {
     /* Straight assignment */
     {2,
-        "	dest->%s = src->%s;\n" 
+        "	dest->%s = src->%s;\n"
         "\n"
     },
 
     /* Copy presized char array */
     {2,
-        "	strcpy(dest->%s, src->%s);\n" 
+        "	strcpy(dest->%s, src->%s);\n"
         "\n"
     },
 
     /* Copy presized unsigned char array */
     {3,
-        "	memcpy(dest->%s, src->%s, sizeof dest->%s);\n" 
+        "	memcpy(dest->%s, src->%s, sizeof dest->%s);\n"
         "\n"
     },
 
@@ -201,11 +201,11 @@ const struct tmpl {
         "\n"
     },
 
-    /* Copy a pointer by freeing the previous version 
+    /* Copy a pointer by freeing the previous version
      * and then just assigning the new version */
     {3,
         "	free(dest->%s);\n"
-        "	dest->%s = src->%s;\n" 
+        "	dest->%s = src->%s;\n"
         "\n"
     }
 };
@@ -214,21 +214,21 @@ const struct tmpl {
 const struct tmpl write_templates[] = {
     /* COPY_STRAIGHT  */
     {2,
-        "	if (fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n"
         "		return 0;\n"
         "\n"
     },
 
     /* COPY_PRESIZED */
     {2,
-        "	if (fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n"
         "		return 0;\n"
         "\n"
     },
 
     /* COPY_PRESIZE_U */
     {2,
-        "	if (fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fwrite(&p->%s, sizeof p->%s, 1, f) != 1)\n"
         "		return 0;\n"
         "\n"
     },
@@ -252,21 +252,21 @@ const struct tmpl write_templates[] = {
 const struct tmpl read_templates[] = {
     /* COPY_STRAIGHT  */
     {2,
-        "	if (fread(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fread(&p->%s, sizeof p->%s, 1, f) != 1)\n"
         "		return 0;\n"
         "\n"
     },
 
     /* COPY_PRESIZED */
     {2,
-        "	if (fread(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fread(&p->%s, sizeof p->%s, 1, f) != 1)\n"
         "		return 0;\n"
         "\n"
     },
 
     /* COPY_PRESIZE_U */
     {2,
-        "	if (fread(&p->%s, sizeof p->%s, 1, f) != 1)\n" 
+        "	if (fread(&p->%s, sizeof p->%s, 1, f) != 1)\n"
         "		return 0;\n"
         "\n"
     },
@@ -305,7 +305,7 @@ static struct map_type {
     int can_pack;		/* Can we pack this data type into an unsigned char buffer? */
     int pack_size;		/* How long is the data type when we pack it? 0 means char arr and fixed len */
     int can_serialize;	/* Boolean, can we write it to file or not? */
-    int assign_template;  	/* Index to array of assignment and copy template snippets */ 
+    int assign_template;  	/* Index to array of assignment and copy template snippets */
     enum datatype dt;   	/* Internal datatype */
     const char* cdecl;	/* Declaring vars */
     const char* cparam; 	/* Param type for access functions(set) */
@@ -338,7 +338,7 @@ static struct map_type {
     { "llu","\"llu\"",  0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongUint,	"unsigned long long %s", "unsigned long long",	"unsigned long long" },
 };
 
-static void p(FILE* f, const char* fmt, ...) 
+static void p(FILE* f, const char* fmt, ...)
     __attribute__ ((format(printf, 2, 3)));
 
 static void p(FILE* f, const char* fmt, ...)
@@ -382,7 +382,7 @@ static const char* filename(const char* suffix)
     static char sz[10000];
     if (g_basename != NULL)
         s = g_basename;
-    else 
+    else
         s = g_name;
 
     sprintf(sz, "%s.%s", s, suffix);
@@ -402,7 +402,7 @@ struct map_type* lookup_map(struct memberspec* pm)
 {
     size_t i, nelem = sizeof map / sizeof *map;
     for (i = 0; i < nelem; i++) {
-        if (map[i].dt == pm->dt) 
+        if (map[i].dt == pm->dt)
             return &map[i];
     }
 
@@ -438,25 +438,25 @@ int returns_status(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return m->returns_status;
-}	
+}
 
 int points_to_mem(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return m->points_to_mem;
-}	
+}
 
 int get_initializer_type(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return m->initializer;
-}	
+}
 
 static const char* get_assignment_code(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return assignment_templates[m->assign_template];
-}	
+}
 
 static int get_copy_count(struct memberspec *pm)
 {
@@ -468,7 +468,7 @@ static const char* get_copy_code(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return copy_templates[m->assign_template].template;
-}	
+}
 
 static int get_write_count(struct memberspec *pm)
 {
@@ -480,7 +480,7 @@ static const char* get_write_code(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return write_templates[m->assign_template].template;
-}	
+}
 
 static int get_read_count(struct memberspec *pm)
 {
@@ -492,31 +492,31 @@ static const char* get_read_code(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return read_templates[m->assign_template].template;
-}	
+}
 
 const char* get_cdecl(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return m->cdecl;
-}	
+}
 
 const char* c_return_value(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return m->cret;
-}	
+}
 
 const char* get_cparam(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return m->cparam;
-}	
+}
 
 const char* get_fmt(struct memberspec *pm)
 {
     struct map_type* m = lookup_map(pm);
     return m->fmt;
-}	
+}
 
 static void map_type(const char* type, struct memberspec* pm)
 {
@@ -536,7 +536,7 @@ static void map_type(const char* type, struct memberspec* pm)
     exit(EXIT_FAILURE);
 }
 
-/* Return a pointer to the start of the n'th memberspec in the string s 
+/* Return a pointer to the start of the n'th memberspec in the string s
  * The first character of the name == start of spec.
  */
 static const char* get_spec_start(const char* s, size_t n)
@@ -544,7 +544,7 @@ static const char* get_spec_start(const char* s, size_t n)
     /* The first spec starts here */
     if (n == 0)
         return s;
-    
+
     for (;;) {
         if (*s == ';')
             n--;
@@ -595,7 +595,7 @@ static void get_memberspec(const char* s, size_t i, struct memberspec* pm)
 
     /* Copy the typespec to a separate string and then map it */
     i = 0;
-    while (*s != '\0' && *s != ';') 
+    while (*s != '\0' && *s != ';')
         type[i++] = *s++;
 
     if (*s != ';') {
@@ -804,7 +804,7 @@ static void check_options(void)
         ok = 0;
     }
 
-    if (!ok) 
+    if (!ok)
         exit(EXIT_FAILURE);
 }
 
@@ -826,7 +826,7 @@ static void check_semantics(void)
     /* We cannot serialize void* members as we do not know their sizes */
     if (g_serialize || g_write_xml) {
         for (i = 0; i < nmembers; i++) {
-            if (!can_serialize(&members[i])) 
+            if (!can_serialize(&members[i]))
                 fprintf(stderr, "warning: The member %s cannot be serialized\n",
                     members[i].name);
         }
@@ -965,7 +965,7 @@ static void define_setters_and_getters(FILE *f)
     for (i = 0; i < nmembers; i++) {
         struct memberspec* pm = &members[i];
         const char* fname = getter_name(g_name, pm->name);
-        p(f, "%s%s %s(%s p)\n", 
+        p(f, "%s%s %s(%s p)\n",
             scope,
             c_return_value(pm),
             fname,
@@ -1008,7 +1008,7 @@ static void declare_setters_and_getters(FILE *f)
     p(f, "/* Get functions for the members of the %s ADT */\n", g_name);
     for (i = 0; i < nmembers; i++) {
         struct memberspec* pm = &members[i];
-        p(f, "%s %s_get_%s(%s p);\n", 
+        p(f, "%s %s_get_%s(%s p);\n",
             c_return_value(pm),
             g_name,
             members[i].name,
@@ -1031,7 +1031,7 @@ static void declare_setters_and_getters(FILE *f)
 
 static void add_setters_and_getters(FILE *f)
 {
-    if (g_hybrid) 
+    if (g_hybrid)
         define_setters_and_getters(f);
     else
         declare_setters_and_getters(f);
@@ -1166,12 +1166,12 @@ static void generate_header(void)
         p(f, "#include <errno.h>\n");
     }
 
-    if (g_generate_packfunctions) 
+    if (g_generate_packfunctions)
         p(f, "#include <stddef.h> /* for size_t */\n");
 
-    if (use_c99_types() 
+    if (use_c99_types()
     || g_generate_packfunctions
-    || g_hybrid 
+    || g_hybrid
     || g_serialize
     || g_write_xml)
         p(f, "\n");
@@ -1216,7 +1216,7 @@ static void define_ctor(FILE* f)
     p(f, "{\n");
     p(f, "\t%s p;\n", g_name);
     p(f, "\n");
-    
+
     /* Allocate memory for the object */
     p(f, "\tif ((p = malloc(sizeof *p)) != NULL)\n");
     p(f, "\t\t%s_init(p);\n", g_name);
@@ -1234,7 +1234,7 @@ static void define_inplace_ctor(FILE* f)
     p(f, "\n");
     p(f, "\tassert(mem != NULL);\n");
     p(f, "\n");
-    
+
     p(f, "\tp = mem;\n");
     p(f, "\t%s_init(p);\n", g_name);
     p(f, "\n");
@@ -1328,7 +1328,7 @@ static void define_write(FILE *f)
     p(f, "int %s_write(%s p, FILE* f)\n", g_name, g_name);
     p(f, "{\n");
 
-    /* Do we need to declare cb? Only if one of the members 
+    /* Do we need to declare cb? Only if one of the members
      * need it. */
     for (i = 0; i < nmembers; i++) {
         struct memberspec* pm = &members[i];
@@ -1367,7 +1367,7 @@ static void define_read(FILE *f)
     p(f, "int %s_read(%s p, FILE* f)\n", g_name, g_name);
     p(f, "{\n");
 
-    /* Do we need to declare cb? Only if one of the members 
+    /* Do we need to declare cb? Only if one of the members
      * need it. */
     for (i = 0; i < nmembers; i++) {
         struct memberspec* pm = &members[i];
@@ -1450,7 +1450,7 @@ static void generate_stack_interface(FILE *f)
     char stackname[10000];
     char sz[10000];
 
-    if (!g_add_stack_interface) 
+    if (!g_add_stack_interface)
         return;
 
     sprintf(stackname, "%s_stack", g_name);
@@ -1534,7 +1534,7 @@ static void generate_check_program(FILE* f)
     char sz[10000];
     char stk[10000];
 
-    if (!g_add_check_program) 
+    if (!g_add_check_program)
         return;
 
     sprintf(sz, "%s_CHECK", g_name);
@@ -1546,7 +1546,7 @@ static void generate_check_program(FILE* f)
     p(f, "int main(void)\n");
     p(f, "{\n");
 
-    if (g_serialize || g_write_xml) 
+    if (g_serialize || g_write_xml)
         p(f, "	FILE *f;\n");
 
     if (g_serialize) {
@@ -1599,7 +1599,7 @@ static void generate_check_program(FILE* f)
     }
 
     /* Free the read/write test object */
-    if (g_serialize) 
+    if (g_serialize)
         p(f, "	%s(rwobj);\n", dtor_name(g_name));
 
     p(f, "	%s_free(obj);\n", g_name);
@@ -1668,7 +1668,7 @@ static void generate_check_program(FILE* f)
 static void generate_sizefunc(FILE *f)
 {
     size_t i, cb, cbFixed;
-    
+
     p(f, "size_t %s_packsize(void)\n", g_name);
     p(f, "{\n");
 
@@ -1858,7 +1858,7 @@ static void generate_implementation(void)
     add_copyright(f);
     add_standard_headers(f);
 
-    if (!g_hybrid) 
+    if (!g_hybrid)
         define_struct(f);
 
     define_ctor(f);
@@ -1882,7 +1882,7 @@ static void generate_implementation(void)
 static void create_one_manpage(
     const char* adt,
     const char* retval,
-    const char* func, 
+    const char* func,
     const char* arg,
     const char* desc,
     const char* see_also)
@@ -1963,14 +1963,14 @@ static void create_dtor_manpage(void)
 static void create_copy_manpage(void)
 {
     const char* copy = copy_name(g_name);
-    const char* desc = 
+    const char* desc =
         "The\n.Nm\nfunction copies the contents of src to dest."
         "The copy will be a so called deep copy.";
     char parambuf[1024];
 
-    sprintf(parambuf, 
-        ".Fa \"%s dest\"\n" 
-        ".Fa \"const %s src\"\n", 
+    sprintf(parambuf,
+        ".Fa \"%s dest\"\n"
+        ".Fa \"const %s src\"\n",
         g_name, g_name);
 
     create_one_manpage(g_name, "int", copy, parambuf,  desc, "\n");
@@ -2000,12 +2000,12 @@ static void generate_man_pages(void)
             return_type = "int";
 
         /* Param string for the setter function */
-        sprintf(parambuf, 
+        sprintf(parambuf,
             ".Fa \"%s p\"\n"
             ".Fa \"%s val\"\n",
             g_name,
             get_cparam(pm));
-                
+
         create_one_manpage(g_name, return_type, setter, parambuf, "Hello", "\n");
 
         /* Create param string for the getter function */
@@ -2033,4 +2033,3 @@ int main(int argc, char* argv[])
 
     exit(EXIT_SUCCESS);
 }
-

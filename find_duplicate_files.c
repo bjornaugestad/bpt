@@ -37,7 +37,7 @@ size_t initial_nentries = 300000; // We start off supporting that many entries
 static void add_entry(const char *fpath, char *hash)
 {
     if (nentries_max == 0) {
-        // first entry. 
+        // first entry.
         if ((entries = malloc(sizeof *entries * initial_nentries)) == NULL) {
             fprintf(stderr, "Out of memory\n");
             exit(EXIT_FAILURE);
@@ -85,7 +85,7 @@ static void show_usage(void)
     };
 
     size_t i, n = sizeof text / sizeof *text;
-    for(i = 0; i < n; i++)
+    for (i = 0; i < n; i++)
         puts(text[i]);
 }
 
@@ -93,7 +93,7 @@ static int duplicate_name(const char *dirs[], size_t ndirs, const char *s)
 {
     size_t i;
 
-    for (i = 0; i < ndirs; i++) 
+    for (i = 0; i < ndirs; i++)
         if (strcmp(dirs[i], s) == 0)
             return 1;
 
@@ -168,7 +168,7 @@ static void parse_command_line(int argc, char *argv[])
             fprintf(stderr, "%s is not a directory.\n", argv[optind]);
             exit(EXIT_FAILURE);
         }
-            
+
         if (nsearchdirs == sizeof searchdirs / sizeof *searchdirs) {
             fprintf(stderr, "error: too many directories specified.\n");
             exit(EXIT_FAILURE);
@@ -252,7 +252,6 @@ err:
     return -1;
 }
 
-                                          
 
 static void traverse_directories(void)
 {
@@ -298,10 +297,9 @@ int main(int argc, char *argv[])
     // entries is now sorted by hash, so we can traverse it
     // to locate duplicates.
     for (i = 1; i < nentries_used; i++) {
-        if (strcmp(entries[i - 1].hash, entries[i].hash) == 0) 
+        if (strcmp(entries[i - 1].hash, entries[i].hash) == 0)
             printf("%s\t%s\n", entries[i - 1].fpath, entries[i].fpath);
     }
 
     return 0;
 }
-

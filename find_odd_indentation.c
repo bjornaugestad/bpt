@@ -7,7 +7,7 @@ static int count(const char *s)
 {
     int n = 0;
 
-    while(isspace(*s++))
+    while (isspace(*s++))
         n++;
 
     return n;
@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
             d = curr_indent - indent;
             lineno++;
 
-            if (indent > 3 && d > 4) 
+            if (indent > 3 && d > 4)
                 printf("%s(%d): warning: Odd indentation 1\n", *argv, lineno);
             else if (curr_indent > 3 && curr_indent % 4 != 0)
                 printf("%s(%d): warning: Odd indentation 2\n", *argv, lineno);
