@@ -434,6 +434,10 @@ static struct {
         { "boost/tuple.hpp", NULL },
         { "boost::tuple" }
     },
+    {
+        { "boost/signals2.hpp", NULL },
+        { "boost::signals2" }
+    },
 };
 
 void add_standard_headers(struct file *head)

@@ -1,4 +1,4 @@
-#AUTOMAKE_OPTIONS=subdir-objects
+AUTOMAKE_OPTIONS=subdir-objects
 
 AM_CFLAGS=\
 	-D_GNU_SOURCE \
