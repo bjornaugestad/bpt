@@ -438,6 +438,10 @@ static struct {
         { "boost/signals2.hpp", NULL },
         { "boost::signals2" }
     },
+    {
+        { "iostream", NULL },
+        { "cin", "cout", "cerr", "clog", "wcin", "wcout", "wcerr", "wclog" },
+    },
 };
 
 void add_standard_headers(struct file *head)
