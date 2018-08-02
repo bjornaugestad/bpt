@@ -126,6 +126,7 @@ static void add_die_and_warning(FILE *f)
     size_t i, n;
 
     static const char *die[] = {
+	"__attribute__((format(printf,1,2)))",
         "static void die(const char *fmt, ...)",
         "{",
         "    va_list ap;",
@@ -143,6 +144,7 @@ static void add_die_and_warning(FILE *f)
         fprintf(f, "%s\n", die[i]);
     
     static const char *warning[] = {
+	"__attribute__((format(printf,1,2)))",
         "static void warning(const char *fmt, ...)",
         "{",
         "    va_list ap;",
@@ -163,6 +165,7 @@ static void add_verbose(FILE *f)
 {
     static const char *verbose[] = {
         "static int print_verbose_stuff;",
+	"__attribute__((format(printf,1,2)))",
         "static void verbose(const char *fmt, ...)",
         "{",
         "    va_list ap;",
