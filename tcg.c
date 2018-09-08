@@ -299,16 +299,16 @@ static struct map_type {
     const char* fmt;	/* printf() format string */
     int sizespec;		/* 1 if type+optional sizespec is a match. Used to differ between %s and %Ns */
     int points_to_mem;	/* 1 if the member points to memory that needs to be freed when we destroy the adt */
-    int initializer;    	/* Type of initializer, either 0 for straight foo=0, 1 for foo[0] = '\0', 2 for *foo = '\0' , 3 for foo = NULL; */
+    int initializer;    /* Type of initializer, either 0 for straight foo=0, 1 for foo[0] = '\0', 2 for *foo = '\0' , 3 for foo = NULL; */
 
-    int returns_status; 	/* Does the set function return a status code or not */
+    int returns_status; /* Does the set function return a status code or not */
     int can_pack;		/* Can we pack this data type into an unsigned char buffer? */
     int pack_size;		/* How long is the data type when we pack it? 0 means char arr and fixed len */
     int can_serialize;	/* Boolean, can we write it to file or not? */
-    int assign_template;  	/* Index to array of assignment and copy template snippets */
-    enum datatype dt;   	/* Internal datatype */
+    int assign_template;/* Index to array of assignment and copy template snippets */
+    enum datatype dt;   /* Internal datatype */
     const char* cdecl;	/* Declaring vars */
-    const char* cparam; 	/* Param type for access functions(set) */
+    const char* cparam; /* Param type for access functions(set) */
     const char* cret;	/* Return type for access functions (get) */
 } map[] = {
     { "s",	"\"s\"",	1, 0, 1, 1, 1, 0, 1, COPY_PRESIZED,	dtCharArray,	"char %s[%lu]",				"const char*",			"const char*" },
@@ -320,14 +320,14 @@ static struct map_type {
     { "u",	"\"u\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtUint,			"unsigned int %s",			"unsigned int",		"unsigned int" },
     { "z",	"\"zu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtSize_t,		"size_t %s",				"size_t",			"size_t" },
 
-    { "d8",	"PRId8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtd8,			"int8_t %s",    "int8_t",   "int8_t" },
-    { "d16","PRId16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtd16,  		"int16_t %s",   "int16_t",  "int16_t" },
-    { "d32","PRId32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtd32,  		"int32_t %s",   "int32_t",  "int32_t" },
-    { "d64","PRId64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtd64,  		"int64_t %s",   "int64_t",  "int64_t" },
-    { "u8",	"PRIu8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtu8,   		"uint8_t %s",   "uint8_t",  "uint8_t" },
-    { "u16","PRIu16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtu16,  		"uint16_t %s",  "uint16_t", "uint16_t" },
-    { "u32","PRIu32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtu32,  		"uint32_t %s",  "uint32_t", "uint32_t" },
-    { "u64","PRIu64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtu64,  		"uint64_t %s",  "uint64_t", "uint64_t" },
+    { "d8",	"PRId8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtd8,			"int8_t %s",            "int8_t",   "int8_t" },
+    { "d16","PRId16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtd16,  		"int16_t %s",           "int16_t",  "int16_t" },
+    { "d32","PRId32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtd32,  		"int32_t %s",           "int32_t",  "int32_t" },
+    { "d64","PRId64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtd64,  		"int64_t %s",           "int64_t",  "int64_t" },
+    { "u8",	"PRIu8",	0, 0, 0, 0, 1, 1, 1, COPY_STRAIGHT,	dtu8,   		"uint8_t %s",           "uint8_t",  "uint8_t" },
+    { "u16","PRIu16",	0, 0, 0, 0, 1, 2, 1, COPY_STRAIGHT,	dtu16,  		"uint16_t %s",          "uint16_t", "uint16_t" },
+    { "u32","PRIu32",	0, 0, 0, 0, 1, 4, 1, COPY_STRAIGHT,	dtu32,  		"uint32_t %s",          "uint32_t", "uint32_t" },
+    { "u64","PRIu64",	0, 0, 0, 0, 1, 8, 1, COPY_STRAIGHT,	dtu64,  		"uint64_t %s",          "uint64_t", "uint64_t" },
 
     { "f",	"\"f\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtFloat,		"float %s",				"float",				"float" },
     { "g",	"\"g\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtDouble,   	"double %s",			"double",				"double" },
@@ -335,7 +335,7 @@ static struct map_type {
     { "ld",	"\"ld\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongInt,  	"long %s",  			"long",					"long" },
     { "lu",	"\"lu\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongUint, 	"unsigned long %s", 	"unsigned long",		"unsigned long" },
     { "lld","\"lld\"",	0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongInt,	"long %s",  			"long long",			"long long" },
-    { "llu","\"llu\"",  0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongUint,	"unsigned long long %s", "unsigned long long",	"unsigned long long" },
+    { "llu","\"llu\"",  0, 0, 0, 0, 0, 0, 1, COPY_STRAIGHT,	dtLongLongUint,	"unsigned long long %s","unsigned long long",	"unsigned long long" },
 };
 
 static void p(FILE* f, const char* fmt, ...)
@@ -1059,21 +1059,21 @@ static void define_struct(FILE* f)
 static const char* ctor_name(const char* adt)
 {
     static char buf[1024];
-    sprintf(buf, "%s_new", adt);
+    snprintf(buf, sizeof buf, "%s_new", adt);
     return buf;
 }
 
 static const char* dtor_name(const char* adt)
 {
     static char buf[1024];
-    sprintf(buf, "%s_free", adt);
+    snprintf(buf, sizeof buf, "%s_free", adt);
     return buf;
 }
 
 static const char* copy_name(const char* adt)
 {
     static char buf[1024];
-    sprintf(buf, "%s_copy", adt);
+    snprintf(buf, sizeof buf, "%s_copy", adt);
     return buf;
 }
 
