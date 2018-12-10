@@ -345,6 +345,19 @@ static struct {
         { "queue", NULL },
         { "std::queue", "std::priority_queue" },
     },
+
+
+
+    {
+        { "iomanip", NULL },
+        {
+            "setiosflags", "resetiosflags", "setbase", "setfill", "setprecision",
+            "setw", "get_money", "put_money", "get_time", "put_time",
+        },
+    },
+
+
+
     {
         { "utility", NULL },
         { 
@@ -438,9 +451,49 @@ static struct {
         { "boost/signals2.hpp", NULL },
         { "boost::signals2" }
     },
+
     {
         { "iostream", NULL },
-        { "cin", "cout", "cerr", "clog", "wcin", "wcout", "wcerr", "wclog" },
+        {
+            "cin", "cout", "cerr", "clog", "wcin", "wcout", "wcerr", "wclog" ,
+            "std::istream", "std::ostream",
+        },
+    },
+    {
+        { "iomanip", NULL },
+        {
+            "setiosflags", "resetiosflags", "setbase", "setfill", "setprecision", 
+            "setw", "get_money", "put_money", "get_time", "put_time", 
+        },
+    },
+
+    {
+        { "mutex", NULL },
+        {
+            "std::lock_guard",
+            "std::mutex",
+            "std::recursive_mutex",
+            "std::recursive_timed_mutex",
+            "std::timed_mutex",
+            "std::unique_lock",
+            "std::try_lock",
+            "std::scoped_lock",
+            "std::lock",
+            "std::once_flag",
+            "std::call_once",
+        },
+    },
+    {
+        { "thread", NULL },
+        {
+            "std::thread",
+            "std::mutex",
+            "this_thread",
+            "this_thread::sleep_for",
+            "this_thread::sleep_until",
+            "this_thread::get_id",
+            "this_thread::yield",
+        },
     },
 };
 
