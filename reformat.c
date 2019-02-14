@@ -166,7 +166,7 @@ static const struct {
     { 1, 0, " -Werror " },
     { 1, 0, " -std=" },
     { 1, 0, " -c " },
-    { 1, 1, " -o " },
+    { 3, 1, " -o " },
 };
 
 // Try to locate s in compiler map, and see if it wants
