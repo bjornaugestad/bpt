@@ -159,6 +159,8 @@ static const struct {
 } compiler_map[] = {
     { 1, 0, " gcc " },
     { 1, 0, " g++ " },
+    { 1, 0, "gcc " },
+    { 1, 0, "g++ " },
     { 1, 0, "-gcc " },
     { 1, 0, "-g++ " },
     { 1, 1, "ccache " },

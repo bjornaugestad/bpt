@@ -15,8 +15,7 @@
 static const char *configfiles[] = {
     "/etc/find_unused_headers.conf",
     "/usr/local/etc/find_unused_headers.conf", 
-    "./find_unused_headers.conf",
-    "./test.conf"
+    "./.find_unused_headers.conf"
 };
 
 /* Users may add config file on the command line.  */
