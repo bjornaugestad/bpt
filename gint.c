@@ -42,15 +42,45 @@
  */
 
 #include <assert.h>
+#include <ctype.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <getopt.h>
 
-static void die(const char *msg)
+static const char *g_filename;
+
+// Naked means no extra stuff, just the type and its functions.
+// This is nifty when we just want to add a type or two to an 
+// existing file. Imagine the vi command !!gint -n foo:string:20
+static int g_naked;
+
+__attribute__((format(printf,1,2)))
+static void die(const char *fmt, ...)
 {
-    fprintf(stderr, "%s\n", msg);
-    exit(EXIT_FAILURE);
+    va_list ap;
+
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    exit(1);
+}
+
+static void show_usage(void)
+{
+    // TODO: add usage text
+    static const char *text[] = {
+        "usage: add your own text here",
+        "",
+    };
+
+    size_t i, n = sizeof text / sizeof *text;
+    for (i = 0; i < n; i++) {
+        puts(text[i]);
+    }
 }
 
 static const char* get_stem(const char *src)
@@ -133,7 +163,7 @@ static size_t get_count(const char *src)
 // 2. If only one value present, then the other value is 0.
 // 3. If single value < 0, then to = 0. if single value > 0, then from = 0.
 // 4. Use .. to separate the two values
-static void get_from_to(const char *src, int *from, int *to)
+static void get_from_to(const char *src, long *from, long *to)
 {
     int n;
     const char *s;
@@ -154,7 +184,7 @@ static void get_from_to(const char *src, int *from, int *to)
     if (s == NULL)
         return; // all good, no range.
 
-    n = sscanf(s, ":%d..%d", from, to);
+    n = sscanf(s, ":%ld..%ld", from, to);
     if (n == 2)
         return; // all good, from..to range specified
     else if (n == 0) {
@@ -244,6 +274,30 @@ static void process_ranged_integer(FILE *f, const char *stem, const char *type, 
     fprintf(f, "\n");
 }
 
+static void sanitycheck(const char *type, long from, long to)
+{
+    static const struct {
+        const char *type;
+        int min, max;
+    } map[] = {
+        { "char", CHAR_MIN, CHAR_MAX },
+        { "int", INT_MIN, INT_MAX },
+    };
+    size_t i, n = sizeof map / sizeof *map;
+
+    if (from > to)
+        die("from > to, which makes little sense\n");
+
+    for (i = 0; i < n; i++) {
+        if (strcmp(map[i].type, type) == 0) {
+            if (from < map[i].min || from > map[i].max)
+                die("from value is out of range for type %s\n", type);
+            if (to < map[i].min || to > map[i].max)
+                die("to value is out of range for type %s\n", type);
+        }
+    }
+}
+
 static void process(FILE *f, const char *src)
 {
     const char *stem, *type;
@@ -259,8 +313,9 @@ static void process(FILE *f, const char *src)
 
     // Right, so no strings at this point.
     // We can therefore use the length for something saner, like ranges.
-    int from, to;
+    long from, to;
     get_from_to(src, &from, &to);
+    sanitycheck(type, from, to);
 
     if (from != 0 || to != 0) {
         process_ranged_integer(f, stem, type, from, to);
@@ -292,8 +347,28 @@ static void process(FILE *f, const char *src)
 
 static void add_initial_stuff(FILE *f)
 {
-    fprintf(f, "#ifndef REPLACEME_H\n");
-    fprintf(f, "#define REPLACEME_H\n");
+    static char buf[4096];
+
+    if (g_filename == NULL)
+        strcpy(buf, "REPLACEME_H");
+    else {
+        size_t i, len = strlen(g_filename);
+        if (len >= sizeof buf)
+            die("Filename too long: %s\n", g_filename);
+
+        memcpy(buf, g_filename, len + 1);
+        for (i = 0; i < len; i++) {
+            if (isalpha(buf[i]) && islower(buf[i]))
+                buf[i] = toupper(buf[i]);
+            else if (strchr("0123456789_", buf[i]))
+                ; // all good
+            else
+                buf[i] = '_';
+        }
+    }
+
+    fprintf(f, "#ifndef %s\n", buf);
+    fprintf(f, "#define %s\n", buf);
     fprintf(f, "\n");
     fprintf(f, "#include <assert.h>\n");
     fprintf(f, "#include <stdint.h>\n");
@@ -306,17 +381,105 @@ static void add_final_stuff(FILE *f)
     fprintf(f, "#endif\n");
 }
 
+static void parse_commandline(int argc, char *argv[])
+{
+    int c;
+    const char *options = "o:hn";
+
+    while ((c = getopt(argc, argv, options)) != EOF) {
+        switch (c) {
+            case 'n':
+                g_naked = 1;
+                break;
+
+            case 'h':
+                show_usage();
+                exit(0);
+
+            case 'o':
+                g_filename = optarg;
+                break;
+
+            case '?':
+            default:
+                exit(1);
+        }
+    }
+}
+
+static void add_unit_test_initial_stuff(FILE *f)
+{
+    fprintf(f, "/* start of unit test stuff */\n");
+    fprintf(f, "#if 1 // Replace 1 with a compile-time macro name like FOO_CHECK\n");
+    fprintf(f, "#include <stdio.h>\n");
+    fprintf(f, "int main(void)\n");
+    fprintf(f, "{\n");
+}
+
+static void add_unit_test_final_stuff(FILE *f)
+{
+    fprintf(f, "#endif\n");
+    fprintf(f, "}\n");
+}
+
+static void add_unit_test(FILE *f, const char *src)
+{
+    const char *stem, *type;
+
+    stem = get_stem(src);
+    type = get_type(src);
+
+    if (strcmp(type, "string") == 0) {
+        return;
+    }
+
+    long from, to;
+    get_from_to(src, &from, &to);
+
+    // Can we set and get all values in range without truncation or other issues?
+    fprintf(f, "    // test %s_t\n", stem);
+    fprintf(f, "    %s_t %s_var;\n", stem, stem);
+    fprintf(f, "    for (%s i = %ld; i <= %ld; i++) {\n", type, from, to);
+    fprintf(f, "        %s x;\n", type);
+    fprintf(f, "        %s_set(&%s_var, i);\n", stem, stem);
+    fprintf(f, "        x = %s_get(&%s_var);\n", stem, stem);
+    fprintf(f, "        if (x != i)\n");
+    fprintf(f, "            fprintf(stderr, \"%s: expected %%ld, got %%ld\\n\", (long)i, (long)x);\n", stem);
+    fprintf(f, "    }\n");
+
+
+}
+
 int main(int argc, char *argv[])
 {
     int i;
     FILE *f = stdout;
 
-    add_initial_stuff(f);
+    parse_commandline(argc, argv);
 
-    for (i = 1; i < argc; i++)
+    if (g_filename != NULL) {
+        f = fopen(g_filename, "w");
+        if (f == NULL)
+            die(g_filename);
+    }
+
+    if (!g_naked)
+        add_initial_stuff(f);
+
+    for (i = optind; i < argc; i++)
         process(f, argv[i]);
 
-    add_final_stuff(f);
+    if (!g_naked) {
+        add_unit_test_initial_stuff(f);
+        for (i = optind; i < argc; i++)
+            add_unit_test(f, argv[i]);
+
+        add_unit_test_final_stuff(f);
+        add_final_stuff(f);
+    }
+
+    if (g_filename != NULL)
+        fclose(f);
 }
 
 
