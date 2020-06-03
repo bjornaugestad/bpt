@@ -6,7 +6,7 @@ AM_CFLAGS=\
 
 bin_PROGRAMS=bf tcg nitfind nitpick find_unused_headers\
 	spaces find_odd_indentation find_duplicate_files\
-	genman genutil reformat
+	genman genutil reformat gint
 
 tcg_SOURCES=tcg.c
 bf_SOURCES=bf.c
