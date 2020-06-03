@@ -575,13 +575,13 @@ static void get_memberspec(const char* s, size_t i, struct memberspec* pm)
     pm->name[i] = '\0';
 
     if (*s != '=') {
-        fprintf(stderr, "%s:Syntax error in memberspec\n", g_name);
+        fprintf(stderr, "%s:Syntax error in memberspec, missing =\n", g_name);
         exit(EXIT_FAILURE);
     }
 
     s++; /* Skip = */
     if (*s != '%') {
-        fprintf(stderr, "%s:Syntax error in memberspec\n", g_name);
+        fprintf(stderr, "%s:Syntax error in memberspec, missing %%\n", g_name);
         exit(EXIT_FAILURE);
     }
     s++; /* Skip % */
@@ -599,7 +599,7 @@ static void get_memberspec(const char* s, size_t i, struct memberspec* pm)
         type[i++] = *s++;
 
     if (*s != ';') {
-        fprintf(stderr, "%s: Syntax error in memberspec\n", g_name);
+        fprintf(stderr, "%s: Syntax error in memberspec, missing ;\n", g_name);
         exit(EXIT_FAILURE);
     }
 
@@ -876,6 +876,11 @@ static void parse_memberspec(void)
     rtrim(s);
 
     nspecs = count_memberspecs(s);
+    if (nspecs == 0) {
+        fprintf(stderr, "member count is zero. ADT has no members\n");
+        exit(EXIT_FAILURE);
+    }
+
     for (i = 0; i < nspecs; i++) {
         get_memberspec(s, i, &ms);
 
@@ -942,14 +947,19 @@ static void add_adt_declarations(FILE *f)
 static const char* getter_name(const char* adt, const char* member)
 {
     static char buf[1024];
-    sprintf(buf, "%s_get_%s", adt, member);
+
+    strcpy(buf, adt);
+    strcat(buf, "_get_");
+    strcat(buf, member);
     return buf;
 }
 
 static const char* setter_name(const char* adt, const char* member)
 {
     static char buf[1024];
-    sprintf(buf, "%s_set_%s", adt, member);
+    strcpy(buf, adt);
+    strcat(buf, "_set_");
+    strcat(buf, member);
     return buf;
 }
 
@@ -1059,21 +1069,27 @@ static void define_struct(FILE* f)
 static const char* ctor_name(const char* adt)
 {
     static char buf[1024];
-    snprintf(buf, sizeof buf, "%s_new", adt);
+
+    strcpy(buf, adt);
+    strcat(buf, "_new");
     return buf;
 }
 
 static const char* dtor_name(const char* adt)
 {
     static char buf[1024];
-    snprintf(buf, sizeof buf, "%s_free", adt);
+
+    strcpy(buf, adt);
+    strcat(buf, "_free");
     return buf;
 }
 
 static const char* copy_name(const char* adt)
 {
     static char buf[1024];
-    snprintf(buf, sizeof buf, "%s_copy", adt);
+
+    strcpy(buf, adt);
+    strcat(buf, "_copy");
     return buf;
 }
 
