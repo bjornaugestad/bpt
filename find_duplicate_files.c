@@ -176,6 +176,11 @@ static void parse_command_line(int argc, char *argv[])
 
         searchdirs[nsearchdirs++] = argv[optind++];
     }
+
+    if (nsearchdirs == 0) {
+        fprintf(stderr, "Please specify one or more directories to search\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 int callback(const char *fpath, const struct stat *sb, int typeflag __attribute__((unused)), struct FTW *ftwbuf __attribute__((unused)))
@@ -298,8 +303,23 @@ int main(int argc, char *argv[])
     // to locate duplicates.
     for (i = 1; i < nentries_used; i++) {
         if (strcmp(entries[i - 1].hash, entries[i].hash) == 0)
-            printf("%s\t%s\n", entries[i - 1].fpath, entries[i].fpath);
+            printf("'%s'\t'%s'\n", entries[i - 1].fpath, entries[i].fpath);
     }
+
+    // TODO: We probably want to be smarter about our output. 
+    // Today's version is a PITA to read since a hash is printed at least twice.
+    // It's just confusing. Some kind of UI would be nice too,
+    // if it helps us with deleting duplicates. GUI or TUI? 
+    // curses or Qt/glade/glib?
+    //
+    // It'd also be nice if we could specify a master tree and a tree with 
+    // possible duplicates. Since we in most cases do have e.g. $HOME/Pictures
+    // and want to check if we somehow miss stuff from e.g. mybackupfile, 
+    // we know which duplicate to keep, and which to delete too.
+    // The ui may become tricky though. We need two directories and we
+    // need to know which one's the master directory. It's not hard, but
+    // we want to be sure that we get things in the right order and not
+    // mix masterdir with copydir.
 
     return 0;
 }

@@ -6,7 +6,7 @@ AM_CFLAGS=\
 
 bin_PROGRAMS=bf tcg nitfind nitpick find_unused_headers\
 	spaces find_odd_indentation find_duplicate_files\
-	genman genutil reformat gint
+	genman genutil reformat gint dupdate dupfind filesize
 
 tcg_SOURCES=tcg.c
 bf_SOURCES=bf.c
@@ -22,3 +22,7 @@ find_unused_headers_SOURCES=\
 	find_unused_headers_src/misc.h
 
 
+dupfind_SOURCES=dup/dupfind.c
+dupdate_SOURCES=dup/dupdate.c
+dupfind_LDADD=-lgcrypt
+dupdate_LDADD=-lgcrypt
