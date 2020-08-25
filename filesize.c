@@ -92,7 +92,10 @@ static void parse_commandline(int argc, char *argv[])
 
 static void printsize(void)
 {
-    printf("%llu%s\n", g_size / g_factor, suffix);
+    if (g_factor == 1)
+        printf("%llu%s\n", g_size, suffix);
+    else
+        printf("%10.02g%s\n", 1.0 * g_size / g_factor, suffix);
 }
 
 static void rtrim(char *s)
