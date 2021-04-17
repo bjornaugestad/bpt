@@ -6,6 +6,7 @@ AM_CFLAGS=\
 
 bin_PROGRAMS=bf tcg nitfind nitpick find_unused_headers\
 	spaces find_odd_indentation find_duplicate_files\
+	find_unique_files\
 	genman genutil reformat gint dupdate dupfind filesize\
 	add
 

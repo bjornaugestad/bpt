@@ -206,6 +206,11 @@ int callback(const char *fpath, const struct stat *sb, int typeflag __attribute_
         return 0;
     }
 
+    if (sb->st_size > 1024 * 1024 * 1024) {
+        fprintf(stderr, "Skipping GB+ file %s, size %llu\n", fpath, (unsigned long long)sb->st_size);
+        return 0;
+    }
+
     // Memory map the file and hash it
     if ((fd = open(fpath, O_RDONLY)) == -1) {
         if (!silent)
