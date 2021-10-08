@@ -206,21 +206,36 @@ static void parse_command_line(int argc, char *argv[])
     }
 }
 
+static char *hashbuf(const char *src, size_t srclen)
+{
+    int algo = GCRY_MD_SHA1;
+    size_t digestsize = gcry_md_get_algo_dlen(algo);
+    size_t i, stringsize = digestsize * 2 + 4;
+
+    unsigned char *digest = malloc(digestsize);
+    char *string = malloc(stringsize);
+
+    if (digest == NULL || string == NULL)
+        return NULL;
+
+    gcry_md_hash_buffer(algo, digest, src, srclen);
+
+    for (i = 0; i < digestsize; i++) {
+        unsigned d = (unsigned)digest[i];
+        sprintf(&string[i * 2], "%02x", d);
+    }
+
+    free(digest);
+    return string;
+}
+
 static char *hashfile(const char *fpath, bool fullfile)
 {
-    int fd = -1, algo = GCRY_MD_SHA1;
-    size_t digestsize = gcry_md_get_algo_dlen(algo);
-    size_t i, stringsize = digestsize * 2 + 1;
-    char *string = NULL, *s;
+    int fd = -1;
+    char *string = NULL;
     unsigned char *digest = NULL;
     void *contents = NULL;
-
-    if ((digest = malloc(digestsize)) == NULL)
-        goto err;
-
-    s = string = malloc(stringsize);
-    if (s == NULL)
-        goto err;
+    size_t mapsize = 0;
 
     // Memory map the file and hash it
     if ((fd = open(fpath, O_RDONLY)) == -1) {
@@ -234,7 +249,7 @@ static char *hashfile(const char *fpath, bool fullfile)
         goto err;
 
     // Optimization: First pass hashes only 4K 
-    size_t mapsize = sb.st_size;
+    mapsize = sb.st_size;
     if (!fullfile && mapsize > 4096)
         mapsize = 4096;
 
@@ -247,13 +262,9 @@ static char *hashfile(const char *fpath, bool fullfile)
         return NULL;
     }
 
-    gcry_md_hash_buffer(algo, digest, contents, mapsize);
+    string = hashbuf(contents, mapsize);
 
-    for (i = 0; i < digestsize; i++, s += 2)
-        sprintf(s, "%02x", digest[i]);
-
-    munmap(contents, sb.st_size);
-    free(digest);
+    munmap(contents, mapsize);
     return string;
 
 err:
@@ -270,80 +281,23 @@ err:
     return NULL;
 }
 
-int callback(const char *fpath, const struct stat *sb, int typeflag __attribute__((unused)), struct FTW *ftwbuf __attribute__((unused)))
+int callback(const char *fpath, const struct stat *sb,
+    int typeflag __attribute__((unused)),
+    struct FTW *ftwbuf __attribute__((unused)))
 {
-    int fd = -1, algo = GCRY_MD_SHA1;
-    size_t digestsize = gcry_md_get_algo_dlen(algo);
-    size_t i, stringsize = digestsize * 2 + 1;
-    char *string = NULL, *s;
-    unsigned char *digest = NULL;
-    void *contents = NULL;
-    static unsigned long nfiles;
-
-    // Ignore anything but regular files
-    if (!S_ISREG(sb->st_mode)) {
-        if (debug)
-            fprintf(stderr, "Skipping %s. Not a regular file.\n", fpath);
+    // Ignore anything but regular files with content
+    if (!S_ISREG(sb->st_mode) || sb->st_size == 0)
         return 0;
-    }
 
-    if (sb->st_size == 0) {
-        if (debug)
-            fprintf(stderr, "Skipping empty file %s\n", fpath);
-        return 0;
-    }
-
-    // Memory map the file and hash it
-    if ((fd = open(fpath, O_RDONLY)) == -1) {
-        if (!silent)
-            perror(fpath);
-        return 0;
-    }
-
-    if ((contents = mmap(NULL, sb->st_size, PROT_READ, MAP_SHARED, fd, 0)) == MAP_FAILED) {
-        close(fd);
-        if (!silent)
-            perror(fpath);
-        return 0;
-    }
-
-    if ((digest = malloc(digestsize)) == NULL)
+    char *string = hashfile(fpath, false);
+    if (string == NULL)
         goto err;
 
-    // Optimization: First pass hashes only 4K 
-    size_t size = sb->st_size;
-    if (size > 4096)
-        size = 4096;
-    gcry_md_hash_buffer(algo, digest, contents, size);
-
-    s = string = malloc(stringsize);
-    if (s == NULL)
-        goto err;
-
-    for (i = 0; i < digestsize; i++, s += 2)
-        sprintf(s, "%02x", digest[i]);
-
-    // So far so good. Store path and hash somewhere suitable
-    // for qsort().
+    // So far so good. Store path and hash somewhere suitable for qsort().
     add_entry(fpath, string);
-    if (verbose)
-        fprintf(stderr, "\r%lu", ++nfiles);
-
-    munmap(contents, sb->st_size);
-    close(fd);
-    free(digest);
     return 0;
 
 err:
-    if (contents != NULL)
-        munmap(contents, sb->st_size);
-
-    if (fd != -1)
-        close(fd);
-
-    free(digest);
-    free(string);
-
     perror(fpath);
     return -1;
 }
@@ -380,17 +334,11 @@ static int cmp_full(const void *v1, const void *v2)
 
 static void sort_results_4k(void)
 {
-    if (verbose)
-        fprintf(stderr, "Sorting %zu found files by 4k hash\n", nentries_used);
-
     qsort(entries, nentries_used, sizeof *entries, cmp_4k);
 }
 
 static void sort_results_full(void)
 {
-    if (verbose)
-        fprintf(stderr, "Sorting %zu found files by 4k/full hash\n", nentries_used);
-
     qsort(entries, nentries_used, sizeof *entries, cmp_full);
 }
 
@@ -408,7 +356,8 @@ static void resolve_4k_dups(void)
     // Now re-hash all files with a NULL fullhash.
     for (size_t i = 0; i < nentries_used; i++) {
         if (entries[i].fullhash == NULL) {
-            if ((entries[i].fullhash = hashfile(entries[i].fpath, true)) == NULL) {
+            entries[i].fullhash = hashfile(entries[i].fpath, true);
+            if (entries[i].fullhash == NULL) {
                 // File disappeared while this program ran?
             }
         }
