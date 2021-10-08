@@ -26,7 +26,7 @@ size_t nsearchdirs = 0;
 // We store paths and hash values in structs like this:
 struct entry {
     char *fpath;
-    char *hash;
+    char *fullhash;
 };
 struct entry *entries = NULL;
 size_t nentries_max = 0; // How many have we allocated room for?
@@ -65,7 +65,7 @@ static void add_entry(const char *fpath, char *hash)
         exit(EXIT_FAILURE);
     }
 
-    entries[nentries_used++].hash = hash;
+    entries[nentries_used++].fullhash = hash;
 }
 
 static void show_usage(void)
@@ -284,7 +284,7 @@ static void traverse_directories(void)
 static int cmp(const void *v1, const void *v2)
 {
     const struct entry *p1 = v1, *p2 = v2;
-    return strcmp(p1->hash, p2->hash);
+    return strcmp(p1->fullhash, p2->fullhash);
 }
 
 static void sort_results(void)
@@ -307,7 +307,7 @@ int main(int argc, char *argv[])
     // entries is now sorted by hash, so we can traverse it
     // to locate duplicates.
     for (i = 1; i < nentries_used; i++) {
-        if (strcmp(entries[i - 1].hash, entries[i].hash) == 0)
+        if (strcmp(entries[i - 1].fullhash, entries[i].fullhash) == 0)
             printf("'%s'\t'%s'\n", entries[i - 1].fpath, entries[i].fpath);
     }
 
