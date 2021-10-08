@@ -1,0 +1,6 @@
+Wed May 12 08:28:40 AM CEST 2021
+find_duplicate_files:
+    - Make it quicker by first hashing just the first 1K or 4K instead of the entire file.
+      If the first 1K matches, then hash 2K, 4K until we hash the entire file.
+
+    - Do we want a GUI? Today's output is crap.
