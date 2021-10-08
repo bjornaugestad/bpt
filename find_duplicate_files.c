@@ -2,6 +2,7 @@
  * with a different name.
  */
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +27,7 @@ size_t nsearchdirs = 0;
 // We store paths and hash values in structs like this:
 struct entry {
     char *fpath;
+    char *hash4k;
     char *fullhash;
 };
 struct entry *entries = NULL;
@@ -34,20 +36,40 @@ size_t nentries_used = 0; // How many has been used?
 
 size_t initial_nentries = 300000; // We start off supporting that many entries
 
-static void add_entry(const char *fpath, char *hash)
+static void free_allocated_mem(void)
 {
+    size_t i;
+
+    for (i = 0; i < nentries_used; i++) {
+        if (entries[i].hash4k != entries[i].fullhash)
+            free(entries[i].fullhash);
+
+        free(entries[i].hash4k);
+        free(entries[i].fpath);
+    }
+
+    free(entries);
+}
+
+static void add_entry(const char *fpath, char *hash4k)
+{
+    size_t cb;
+
     if (nentries_max == 0) {
         // first entry.
-        if ((entries = malloc(sizeof *entries * initial_nentries)) == NULL) {
+        cb = sizeof *entries * initial_nentries;
+        if ((entries = malloc(cb)) == NULL) {
             fprintf(stderr, "Out of memory\n");
             exit(EXIT_FAILURE);
         }
 
+        memset(entries, 0, cb);
         nentries_max = initial_nentries;
     }
     else if (nentries_used == nentries_max) {
         // reallocate
         struct entry *tmp;
+        size_t old_size = nentries_used * sizeof *entries;
         size_t new_size = nentries_max * 2 * sizeof *entries;
 
         if ((tmp = realloc(entries, new_size)) == NULL) {
@@ -56,6 +78,7 @@ static void add_entry(const char *fpath, char *hash)
         }
         entries = tmp;
         nentries_max *= 2;
+        memset(&entries[old_size], 0, new_size - old_size);
     }
 
     // Add element. Note that we create a copy of fpath, but *NOT* of
@@ -65,7 +88,7 @@ static void add_entry(const char *fpath, char *hash)
         exit(EXIT_FAILURE);
     }
 
-    entries[nentries_used++].fullhash = hash;
+    entries[nentries_used++].hash4k = hash4k;
 }
 
 static void show_usage(void)
@@ -183,6 +206,70 @@ static void parse_command_line(int argc, char *argv[])
     }
 }
 
+static char *hashfile(const char *fpath, bool fullfile)
+{
+    int fd = -1, algo = GCRY_MD_SHA1;
+    size_t digestsize = gcry_md_get_algo_dlen(algo);
+    size_t i, stringsize = digestsize * 2 + 1;
+    char *string = NULL, *s;
+    unsigned char *digest = NULL;
+    void *contents = NULL;
+
+    if ((digest = malloc(digestsize)) == NULL)
+        goto err;
+
+    s = string = malloc(stringsize);
+    if (s == NULL)
+        goto err;
+
+    // Memory map the file and hash it
+    if ((fd = open(fpath, O_RDONLY)) == -1) {
+        if (!silent)
+            perror(fpath);
+        goto err;
+    }
+
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) 
+        goto err;
+
+    // Optimization: First pass hashes only 4K 
+    size_t mapsize = sb.st_size;
+    if (!fullfile && mapsize > 4096)
+        mapsize = 4096;
+
+    contents = mmap(NULL, mapsize, PROT_READ, MAP_SHARED, fd, 0);
+    close(fd);
+    fd = -1;
+    if (contents == MAP_FAILED) {
+        if (!silent)
+            perror(fpath);
+        return NULL;
+    }
+
+    gcry_md_hash_buffer(algo, digest, contents, mapsize);
+
+    for (i = 0; i < digestsize; i++, s += 2)
+        sprintf(s, "%02x", digest[i]);
+
+    munmap(contents, sb.st_size);
+    free(digest);
+    return string;
+
+err:
+    if (contents != NULL)
+        munmap(contents, mapsize);
+
+    if (fd != -1)
+        close(fd);
+
+    free(digest);
+    free(string);
+
+    perror(fpath);
+    return NULL;
+}
+
 int callback(const char *fpath, const struct stat *sb, int typeflag __attribute__((unused)), struct FTW *ftwbuf __attribute__((unused)))
 {
     int fd = -1, algo = GCRY_MD_SHA1;
@@ -206,11 +293,6 @@ int callback(const char *fpath, const struct stat *sb, int typeflag __attribute_
         return 0;
     }
 
-    if (sb->st_size > 1024 * 1024 * 1024) {
-        fprintf(stderr, "Skipping GB+ file %s, size %llu\n", fpath, (unsigned long long)sb->st_size);
-        return 0;
-    }
-
     // Memory map the file and hash it
     if ((fd = open(fpath, O_RDONLY)) == -1) {
         if (!silent)
@@ -228,7 +310,11 @@ int callback(const char *fpath, const struct stat *sb, int typeflag __attribute_
     if ((digest = malloc(digestsize)) == NULL)
         goto err;
 
-    gcry_md_hash_buffer(algo, digest, contents, sb->st_size);
+    // Optimization: First pass hashes only 4K 
+    size_t size = sb->st_size;
+    if (size > 4096)
+        size = 4096;
+    gcry_md_hash_buffer(algo, digest, contents, size);
 
     s = string = malloc(stringsize);
     if (s == NULL)
@@ -262,7 +348,6 @@ err:
     return -1;
 }
 
-
 static void traverse_directories(void)
 {
     size_t i;
@@ -281,18 +366,53 @@ static void traverse_directories(void)
     }
 }
 
-static int cmp(const void *v1, const void *v2)
+static int cmp_4k(const void *v1, const void *v2)
 {
     const struct entry *p1 = v1, *p2 = v2;
-    return strcmp(p1->fullhash, p2->fullhash);
+    return strcmp(p1->hash4k, p2->hash4k);
 }
 
-static void sort_results(void)
+static int cmp_full(const void *v1, const void *v2)
+{
+    const struct entry *p1 = v1, *p2 = v2;
+    return strcmp(p1->hash4k, p2->hash4k);
+}
+
+static void sort_results_4k(void)
 {
     if (verbose)
-        fprintf(stderr, "Sorting %zu found files\n", nentries_used);
+        fprintf(stderr, "Sorting %zu found files by 4k hash\n", nentries_used);
 
-    qsort(entries, nentries_used, sizeof *entries, cmp);
+    qsort(entries, nentries_used, sizeof *entries, cmp_4k);
+}
+
+static void sort_results_full(void)
+{
+    if (verbose)
+        fprintf(stderr, "Sorting %zu found files by 4k/full hash\n", nentries_used);
+
+    qsort(entries, nentries_used, sizeof *entries, cmp_full);
+}
+
+// If 4k hashes are equal, compute full hash.
+// If hashes differ, move 4k hash to full hash for uniform sorting later on.
+static void resolve_4k_dups(void)
+{
+    for (size_t i = 1; i < nentries_used; i++) {
+        if (strcmp(entries[i - 1].hash4k, entries[i].hash4k) != 0) {
+            entries[i - 1].fullhash = entries[i - 1].hash4k;
+            entries[i].fullhash = entries[i].hash4k;
+        }
+    }
+
+    // Now re-hash all files with a NULL fullhash.
+    for (size_t i = 0; i < nentries_used; i++) {
+        if (entries[i].fullhash == NULL) {
+            if ((entries[i].fullhash = hashfile(entries[i].fpath, true)) == NULL) {
+                // File disappeared while this program ran?
+            }
+        }
+    }
 }
 
 int main(int argc, char *argv[])
@@ -301,7 +421,9 @@ int main(int argc, char *argv[])
 
     parse_command_line(argc, argv);
     traverse_directories();
-    sort_results();
+    sort_results_4k();
+    resolve_4k_dups();
+    sort_results_full();
 
     // Assuming that we got this far, now what?
     // entries is now sorted by hash, so we can traverse it
@@ -325,6 +447,8 @@ int main(int argc, char *argv[])
     // need to know which one's the master directory. It's not hard, but
     // we want to be sure that we get things in the right order and not
     // mix masterdir with copydir.
+
+    free_allocated_mem();
 
     return 0;
 }
