@@ -20,6 +20,8 @@ int verbose = 0;
 int debug = 0;
 int silent = 0; // print error messages? (Some will always be printed)
 
+const char *master = NULL;
+
 // We store the directories to traverse in an array.
 const char *searchdirs[10240];
 size_t nsearchdirs = 0;
@@ -103,6 +105,7 @@ static void show_usage(void)
         "-x Stay on file system. Dont' traverse into mounted filesystems.",
         "-v Verbose. Print info as we progress.",
         "-s silent. Don't print (most) error messages.",
+        "-m directory. Treat dir as a master directory, not deleting anything from it or its subdirs",
         "-d debug. Print misc debugging info.",
         "",
     };
@@ -144,7 +147,7 @@ static void parse_command_line(int argc, char *argv[])
     extern char *optarg;
     extern int optind;
 
-    const char *options = "vhxds";
+    const char *options = "vhxdsm:";
 
     if (argc == 1) {
         show_usage();
@@ -156,6 +159,10 @@ static void parse_command_line(int argc, char *argv[])
             case 'h':
                 show_usage();
                 exit(EXIT_SUCCESS);
+
+            case 'm':
+                master = optarg;
+                break;
 
             case 's':
                 silent = 1;
