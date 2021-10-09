@@ -385,8 +385,28 @@ int main(int argc, char *argv[])
     // entries is now sorted by hash, so we can traverse it
     // to locate duplicates.
     for (i = 1; i < nentries_used; i++) {
-        if (strcmp(entries[i - 1].fullhash, entries[i].fullhash) == 0)
-            printf("'%s'\t'%s'\n", entries[i - 1].fpath, entries[i].fpath);
+        if (strcmp(entries[i - 1].fullhash, entries[i].fullhash) == 0) {
+            if (master != NULL) {
+                if (strstr(entries[i - 1].fpath, master)) {
+                    if (strstr(entries[i].fpath, master)) {
+                        // Hmm, master is in both entries' paths
+                        printf("# '%s'\t'%s'\n", entries[i - 1].fpath, entries[i].fpath);
+                    }
+                    else {
+                        printf("rm %s # dup of %s\n", entries[i].fpath, entries[i - 1].fpath);
+                    }
+                }
+                else if (strstr(entries[i].fpath, master)) {
+                    printf("rm %s #dup of %s\n", entries[i - 1].fpath, entries[i].fpath);
+                }
+                else {
+                    // master set, but neither contains it.
+                    printf("'%s'\t'%s'\n", entries[i - 1].fpath, entries[i].fpath);
+                }
+            }
+            else 
+                printf("'%s'\t'%s'\n", entries[i - 1].fpath, entries[i].fpath);
+        }
     }
 
     // TODO: We probably want to be smarter about our output. 
