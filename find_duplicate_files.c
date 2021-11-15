@@ -22,6 +22,9 @@ int silent = 0; // print error messages? (Some will always be printed)
 
 const char *master = NULL;
 
+static const char *ignores[200];
+static size_t nignores;
+
 // We store the directories to traverse in an array.
 const char *searchdirs[10240];
 size_t nsearchdirs = 0;
@@ -140,6 +143,28 @@ static int isdirectory(const char *s)
     return S_ISDIR(st.st_mode);
 }
 
+static inline void add_ignore(const char *val)
+{
+    static const size_t avail = sizeof ignores / sizeof *ignores;
+    if (nignores == avail) {
+        fprintf(stderr, "Too many -i arguments\n");
+        exit(EXIT_FAILURE);
+    }
+
+    ignores[nignores++] = val;
+}
+
+static inline bool in_ignores(const char *val)
+{
+    size_t i;
+
+    for (i = 0; i < nignores; i++) {
+        if (strstr(val, ignores[i]))
+            return true;
+    }
+
+    return false;
+}
 
 static void parse_command_line(int argc, char *argv[])
 {
@@ -147,7 +172,7 @@ static void parse_command_line(int argc, char *argv[])
     extern char *optarg;
     extern int optind;
 
-    const char *options = "vhxdsm:";
+    const char *options = "vhxdsm:i:";
 
     if (argc == 1) {
         show_usage();
@@ -159,6 +184,10 @@ static void parse_command_line(int argc, char *argv[])
             case 'h':
                 show_usage();
                 exit(EXIT_SUCCESS);
+
+            case 'i':
+                add_ignore(optarg);
+                break;
 
             case 'm':
                 master = optarg;
@@ -294,6 +323,9 @@ int callback(const char *fpath, const struct stat *sb,
 {
     // Ignore anything but regular files with content
     if (!S_ISREG(sb->st_mode) || sb->st_size == 0)
+        return 0;
+
+    if (in_ignores(fpath))
         return 0;
 
     char *string = hashfile(fpath, false);
