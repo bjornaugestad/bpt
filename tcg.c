@@ -570,7 +570,7 @@ static void get_memberspec(const char* s, size_t i, struct memberspec* pm)
 
     s = get_spec_start(s, i);
     i = 0;
-    while (*s != '\0' && *s != '=' && i < sizeof pm->name)
+    while (*s != '\0' && *s != '=' && i < sizeof pm->name - 1)
         pm->name[i++] = *s++;
     pm->name[i] = '\0';
 
