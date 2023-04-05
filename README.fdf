@@ -1,0 +1,44 @@
+fdf: Find duplicate files. Duplicate files are a big issue as I switch
+     computers all the time and need to locate and delete duplicates
+     all the time.
+
+     As an exercise in LMDB, I will write a new program to find duplicate
+     files using LMDB as storage.
+
+     LMDB has no concept of indices, it's just a key/value store. But we
+     can have "subdatabases", where one subdb equals a table in a regular
+     RDBMS. So what's our DB design like for fdf?
+
+DB Design:
+    Requirements:
+        - We need to store absolute path for all files (realpath() ftw)
+        - We need to store misc properties per file, like size, hash values
+          for different parts of the file(4K, 1M, full file).
+        - The search part is the most important part, as we want to find
+          and report duplicate files.
+
+    Tables(subdb):
+        - file:
+            - full path (unique key. One entry per file)
+            - stat info (one entry per file. Possible key as dups have same size)
+            - 4K hash   (one entry per file. Can be duplicate)
+            - 1M hash   (0..1 entry per file. Can be duplicate. 0 hashes if file < 4K)
+            - full hash (0..1 entry per file. Can be duplicate. 0 hashes if file < 4K))
+
+            * Since we want to find duplicates for the hash values, we need
+            to search using a non-path key. How? Perhaps just mmap() our own file?
+            Sure, but that doesn't teach us much about lmdb.
+
+            * When do we even need a key? We basically just want the full hash and
+            files with that hash, but use smaller hashes to speed things up. Hashing
+            a big tarball takes a lot of time.
+
+            * It looks as if I can use different cmp() functions as different 'indices'.
+            If so, I can stick to one simple record/struct and use multiple cmp() functions.
+            That'd be nice.
+
+Functionality:
+   * Index one or more file systems and add records to the db
+   * refresh db without starting from scratch. Just feed it with a list of files.
+     - What about deleted files?
+   * Query the db in various ways for duplicate files.
