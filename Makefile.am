@@ -4,7 +4,7 @@ AM_CFLAGS=\
 	-D_GNU_SOURCE \
 	-Winline -Wshadow -W -Wformat -Wall -pedantic -std=gnu99 -O0 -ggdb
 
-bin_PROGRAMS=bf tcg nitfind nitpick find_unused_headers\
+bin_PROGRAMS=extract bf tcg nitfind nitpick find_unused_headers\
 	mpp spaces find_odd_indentation find_duplicate_files\
 	find_unique_files\
 	typesafe\
@@ -15,6 +15,7 @@ tcg_SOURCES=tcg.c
 bf_SOURCES=bf.c
 find_duplicate_files_LDADD=-lgcrypt
 mpp_LDADD=-lmeta
+extract_LDADD=-lmeta
 EXTRA_DIST=$(man_MANS)
 man_MANS=tcg.1 bf.1
 
