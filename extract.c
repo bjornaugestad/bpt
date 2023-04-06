@@ -16,6 +16,9 @@ static void show_usage(void)
     // TODO: add usage text
     static const char *text[] = {
         "extract: Extract patterns from files."
+        "USAGE: extract pattern file...",
+        "USAGE: extract -e pattern -e pattern... file...",
+        "USAGE: extract pattern - (for stdin)",
         "",
     };
 
@@ -49,7 +52,6 @@ static void compile_patterns(void)
 
         if (!regex_comp(regexes[i], pattern[i]))
             die("Unable to compile pattern %s\n", pattern[i]);
-
     }
 }
 
@@ -75,19 +77,20 @@ static void parse_commandline(int argc, char *argv[])
     }
 }
 
+
+// Tricky fact: "foo foo foo" is found once. It should've been found trice.
+//
 static void extract_if_matching(const char *src)
 {
     size_t i, j;
     char line[10 *1024];
-
-
 
     for (i = 0; i < npatterns; i++) {
         int rc = regex_exec(regexes[i], src);
         if (rc == -1)
             die("Some error occurred");
 
-        // Now extract all matching patterns
+        // Now extract all matching patterns. 
         for (j = 0; j < (size_t)rc; j++) {
             if (!regex_get_match(regexes[i], j, src, line, sizeof line))
                 die("Internal error");
@@ -101,14 +104,20 @@ static void process(const char *filename)
 {
     char line[10 *1024];
 
-    FILE *f = fopen(filename, "r");
+    FILE *f;
+
+    if (strcmp(filename, "-") == 0)
+        f = stdin;
+    else
+        f = fopen(filename, "r");
     if (f == NULL) 
         die_perror(filename);
 
     while (fgets(line, sizeof line, f))
         extract_if_matching(line);
 
-    fclose(f);
+    if (strcmp(filename, "-") != 0)
+        fclose(f);
 }
 
 
