@@ -14,6 +14,7 @@
 #include <ctype.h>
 
 
+static int file_loop;
 static int configfile_support;
 static const char *name;
 static int commandline_parsing;
@@ -43,7 +44,7 @@ static void show_usage(void)
 static void parse_commandline(int argc, char *argv[])
 {
     int c;
-    const char *opts = "o:c";
+    const char *opts = "o:cf";
 
     while ((c = getopt(argc, argv, opts)) != EOF) {
         switch (c) {
@@ -54,6 +55,10 @@ static void parse_commandline(int argc, char *argv[])
             case 'o':
                 commandline_parsing = 1;
                 options = optarg;
+                break;
+
+            case 'f':
+                file_loop = 1;
                 break;
 
             case '?':
@@ -100,10 +105,12 @@ static void check_options(void)
 }
 
 static const char *includes[] = {
+    "assert.h",
     "stdarg.h",
     "stdio.h",
     "string.h",
     "stdint.h",
+    "getopt.h",
     "stdlib.h",
     "ctype.h",
     "unistd.h",
@@ -171,7 +178,7 @@ static void add_verbose(FILE *f)
         "    va_list ap;",
         "",
         "    if (!print_verbose_stuff)",
-        "        return;",
+        "       return;",
         "",
         "    va_start(ap, fmt);",
         "    vfprintf(stderr, fmt, ap);",
@@ -275,7 +282,6 @@ static void add_main(FILE *f)
 {
     fprintf(f, "int main(int argc, char *argv[])\n");
     fprintf(f, "{\n");
-    fprintf(f, "\n");
 
     if (commandline_parsing) {
         fprintf(f, "    parse_commandline(argc, argv);\n");
@@ -283,8 +289,21 @@ static void add_main(FILE *f)
     if (configfile_support) {
         fprintf(f, "    read_configfile();\n");
     }
+
     fprintf(f, "\n");
-    fprintf(f, "    // TODO: Add functionality here.\n");
+    if (file_loop) {
+        fprintf(f, "    if (optind == argc) {\n");
+        fprintf(f, "        process(\"-\"); // stdin\n");
+        fprintf(f, "    }\n");
+        fprintf(f, "    else {\n");
+        fprintf(f, "        while (optind < argc)\n");
+        fprintf(f, "            process(argv[optind++]);\n");
+        fprintf(f, "    }\n");
+    }
+    else {
+        fprintf(f, "    // TODO: Add functionality here.\n");
+    }
+
     fprintf(f, "\n");
     fprintf(f, "    exit(0);\n");
     fprintf(f, "}\n");
@@ -316,6 +335,29 @@ static void add_configfile(FILE *f)
     fprintf(f, "\n");
 }
 
+static void add_process(FILE *f)
+{
+    fprintf(f, "\n");
+    fprintf(f, "static void process(const char *filename)\n");
+    fprintf(f, "{\n");
+    fprintf(f, "    FILE *f;\n");
+    fprintf(f, "    char line[4096];\n");
+    fprintf(f, "\n");
+    fprintf(f, "    if (strcmp(filename, \"-\") == 0)\n");
+    fprintf(f, "        f = stdin;\n");
+    fprintf(f, "    else if ((f = fopen(filename, \"r\")) == NULL)\n");
+    fprintf(f, "        die(\"%%s:%%s\\n\", filename, strerror(errno));\n");
+    fprintf(f, "\n");
+    fprintf(f, "    while (fgets(line, sizeof line, f) != NULL) {\n");
+    fprintf(f, "        // process line here\n");
+    fprintf(f, "    }\n");
+    fprintf(f, "\n");
+    fprintf(f, "    if (f != stdin)\n");
+    fprintf(f, "        fclose(f);\n");
+    fprintf(f, "}\n");
+    fprintf(f, "\n");
+}
+
 static void generate_code(void)
 {
     FILE *f;
@@ -337,8 +379,10 @@ static void generate_code(void)
     if (configfile_support)
         add_configfile(f);
 
-    add_main(f);
+    if (file_loop)
+        add_process(f);
 
+    add_main(f);
     fclose(f);
 }
 
@@ -353,5 +397,5 @@ int main(int argc, char *argv[])
 
     check_options();
     generate_code();
-    return 1;
+    return 0;
 }

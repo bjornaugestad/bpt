@@ -4,3 +4,15 @@ find_duplicate_files:
       If the first 1K matches, then hash 2K, 4K until we hash the entire file.
 
     - Do we want a GUI? Today's output is crap.
+
+Thu Apr  6 08:57:36 AM CEST 2023
+- Trenger vi et lite program som kan sjekke filstatus, directorystatus, broken links,
+  mm? Vi har jo 'find', som kan alt dette, men i multipasses. Om vi klarer oss med
+  find er det best, for find fins overalt.
+
+Fri Apr  7 11:39:21 AM CEST 2023
+- genutil bør kunne generere kode for filtraversering (den vanlige løkka), 
+  samt for directorytraversering (ntfw())
+
+- Trenger vi en util for å summere filstørrelse?
+- Trenger vi en util for å kalkulere md5sum for et directory?
