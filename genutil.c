@@ -25,6 +25,7 @@ static void show_usage(void)
     static const char *text[] = {
         "usage: genutil [opts] name",
         "opts can be",
+        "    f      Add file processing loops",
         "    c      add configuration file support",
         "    o opts add option parsing. opts contains the options we want to support",
         "",
@@ -35,6 +36,7 @@ static void show_usage(void)
         "example: genutil -c -o xz: foo",
         "example: genutil -o xz: foo",
     };
+
     size_t i, n = sizeof text / sizeof *text;
     for (i = 0; i < n; i++) {
         puts(text[i]);
@@ -106,15 +108,15 @@ static void check_options(void)
 
 static const char *includes[] = {
     "assert.h",
-    "stdarg.h",
-    "stdio.h",
-    "string.h",
-    "stdint.h",
-    "getopt.h",
-    "stdlib.h",
     "ctype.h",
-    "unistd.h",
     "errno.h",
+    "getopt.h",
+    "stdarg.h",
+    "stdint.h",
+    "stdio.h",
+    "stdlib.h",
+    "string.h",
+    "unistd.h",
 };
 
 static void add_includes(FILE *f)
