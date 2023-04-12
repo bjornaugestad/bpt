@@ -28,7 +28,7 @@ static void show_usage(void)
     }
 }
 
-#define  MAXPATTERNS  100
+#define  MAXPATTERNS  1000
 static size_t npatterns = 0;
 static const char* pattern[MAXPATTERNS];
 static regex regexes[MAXPATTERNS];
@@ -84,18 +84,27 @@ static void extract_if_matching(const char *src)
 {
     size_t i, j;
     char line[10 *1024];
+    const char *orgsrc = src;
 
     for (i = 0; i < npatterns; i++) {
-        int rc = regex_exec(regexes[i], src);
-        if (rc == -1)
-            die("Some error occurred");
+        src = orgsrc;
+        for (;;) { // In case we have more than one match per line
+            int rc = regex_exec(regexes[i], src);
+            if (rc == -1)
+                die("Some error occurred");
+            else if (rc == 0)
+                break;
 
-        // Now extract all matching patterns. 
-        for (j = 0; j < (size_t)rc; j++) {
-            if (!regex_get_match(regexes[i], j, src, line, sizeof line))
-                die("Internal error");
+            // Now extract all matching patterns. We have to loop, chatgpt says. 
+            for (j = 0; j < (size_t)rc; j++) {
+                memset(line, 0, sizeof line);
+                if (!regex_get_match(regexes[i], j, src, line, sizeof line))
+                    die("Internal error");
 
-            printf("%s\n", line);
+                src += strlen(line);
+                puts(line);
+                break; // We skip subexpressions
+            }
         }
     }
 }
@@ -111,7 +120,7 @@ static void process(const char *filename)
     else
         f = fopen(filename, "r");
     if (f == NULL) 
-        die_perror(filename);
+        die_perror("%s", filename);
 
     while (fgets(line, sizeof line, f))
         extract_if_matching(line);
