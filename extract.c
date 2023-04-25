@@ -115,17 +115,18 @@ static void process(const char *filename)
 
     FILE *f;
 
-    if (strcmp(filename, "-") == 0)
+    if (strcmp(filename, "-") == 0 || !isatty(STDIN_FILENO))
         f = stdin;
     else
         f = fopen(filename, "r");
+
     if (f == NULL) 
         die_perror("%s", filename);
 
     while (fgets(line, sizeof line, f))
         extract_if_matching(line);
 
-    if (strcmp(filename, "-") != 0)
+    if (f != stdin)
         fclose(f);
 }
 

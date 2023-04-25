@@ -70,7 +70,7 @@ static unsigned long g_lineno;
 static void process(const char *filename)
 {
     FILE *f;
-    char line[4096];
+    static char line[8192 * 1024]; // 8MB linelen to avoid chopping up lines
     long len;
 
     if (strcmp(filename, "-") == 0)
