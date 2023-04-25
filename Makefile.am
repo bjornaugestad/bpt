@@ -8,6 +8,7 @@ bin_PROGRAMS=extract bf tcg nitfind nitpick find_unused_headers\
 	mpp spaces find_odd_indentation find_duplicate_files\
     find_long_lines\
 	find_unique_files\
+    append\
 	typesafe\
 	genman genutil reformat gint dupdate dupfind filesize\
 	add
