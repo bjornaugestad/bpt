@@ -34,3 +34,6 @@ dupfind_SOURCES=dup/dupfind.c
 dupdate_SOURCES=dup/dupdate.c
 dupfind_LDADD=-lgcrypt
 dupdate_LDADD=-lgcrypt
+
+vbf_LDADD=-lncurses
+

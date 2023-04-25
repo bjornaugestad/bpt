@@ -14,12 +14,15 @@
 //    q(for quit) 
 //    the z commands (z ENTER for current line at top,
 //    z. for current line at middle, z- for current line at bottom.
+//    / for search, n(next), ?(prev)
 
+#include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 #include <unistd.h>
 
 #include <fcntl.h>
@@ -27,65 +30,83 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-int main(int argc, char *argv[])
+#include <ncurses.h>
+
+__attribute__((format(printf,1,2)))
+static void die(const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    exit(1);
+}
+
+__attribute__((format(printf,1,2)))
+static void die_perror(const char *fmt, ...)
+{
+    va_list ap;
+
+    fprintf(stderr, "%s", strerror(errno));
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+
+    exit(EXIT_FAILURE);
+}
+
+static void check_args(int argc, char *argv[])
 {
     struct stat st;
+
+    if (argc != 2)
+        die("USAGE: vbf filename\n");
+
+    if (stat(argv[1], &st))
+        die_perror("%s\n", argv[1]);
+}
+
+static void mmap_file(const char *filename, void **mem, size_t *memsize)
+{
     int fd;
+    struct stat st;
+
+    if ((fd = open(filename, O_RDONLY)) == -1)
+        die_perror("%s", filename);
+
+    if (fstat(fd, &st))
+        die_perror("%s", filename);
+
+    if (st.st_size == 0)
+        die("vbf: file %s is empty\n", filename);
+
+    *memsize = st.st_size;
+    *mem = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    if (*mem == MAP_FAILED)
+        die_perror("%s", filename);
+
+    close(fd);
+}
+
+int main(int argc, char *argv[])
+{
     void *mem;
+    size_t memsize;
     const char *filename = argv[1];
 
-    if (argc != 2) {
-        fprintf(stderr, "USAGE: vbf filename\n");
-        exit(EXIT_FAILURE);
-    }
+    check_args(argc, argv);
+    mmap_file(filename, &mem, &memsize);
 
-    if ((fd = open(filename, O_RDONLY)) == -1) {
-        perror(filename);
-        exit(EXIT_FAILURE);
-    }
-
-    if (fstat(fd, &st)) {
-        perror(filename);
-        exit(EXIT_FAILURE);
-    }
-
-    if (st.st_size == 0) {
-        fprintf(stderr, "vbf: file %s is empty\n", argv[1]);
-        exit(EXIT_FAILURE);
-    }
-
-    mem = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-    if (mem == MAP_FAILED) {
-        perror(filename);
-        exit(EXIT_FAILURE);
-    }
-    close(fd);
-
-
-    // Now we're ready to start processing
-    // Just for proof: print one line
-    {
-        char line[4096], *p;
-
-        p = strchr(mem, '\n');
-        if (p == NULL)
-            fprintf(stderr, "Could not find a line in the mapped file named %s\n", filename);
-        else {
-            ptrdiff_t delta = p - (char *)mem;
-            if ((size_t)delta >= sizeof line) 
-                fprintf(stderr, "%s: Found a line, but it was too long for our buffer\n", filename);
-            else {
-                memcpy(line, mem, delta);
-                line[delta] = '\0';
-                printf("%s\n", line);
-            }
-        }
-    }
-
+    // Now ncurses initialization
+    initscr();
+    raw();
+    noecho();
 
 
     // Teardown
-    munmap(mem, st.st_size);
+    endwin(); 
+    munmap(mem, memsize);
     return 0;
 }
 
