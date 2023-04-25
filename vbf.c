@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
     void *mem;
     size_t memsize;
     const char *filename = argv[1];
+    int nrows, ncols;
 
     check_args(argc, argv);
     mmap_file(filename, &mem, &memsize);
@@ -102,6 +103,17 @@ int main(int argc, char *argv[])
     initscr();
     raw();
     noecho();
+    getmaxyx(stdscr, nrows, ncols);
+
+    // Put some text on the window 
+    mvprintw(1, 10, "at y==1, x==10. Screen size is %d rows and %d cols", nrows, ncols);
+    mvprintw(10, 1, "press any key to exit");
+    refresh();
+    getch();
+
+    // Do we want to index the mmapped file? We do need to
+    // know the start and end of each line, so we later can
+    // display those lines. 
 
 
     // Teardown
