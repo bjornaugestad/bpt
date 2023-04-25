@@ -460,7 +460,7 @@ int main(int argc, char *argv[])
     if (g_filename != NULL) {
         f = fopen(g_filename, "w");
         if (f == NULL)
-            die(g_filename);
+            die("%s", g_filename);
     }
 
     if (!g_naked)
