@@ -16,6 +16,14 @@
 //    z. for current line at middle, z- for current line at bottom.
 //    / for search, n(next), ?(prev)
 
+// Notes to self:
+// 1. We want to use the Forms library of ncurses, as that library allows
+//    us to use a field with O_WRAP properties. "man set_field_opts" for
+//    the gory details.
+//
+// 2. If lines fold, the actual number of visible lines go down. Keep that in mind.
+// Make a small test program to check out Forms 
+
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -267,6 +275,12 @@ int main(int argc, char *argv[])
             if (len == 0)
                 continue; // blank line
 
+            // TODO: Add folding here. Manually! Fuck the Form library
+            // even if it seems very useful, it's too sensitive to terminfo.
+            // So, if len > ncols, we must fold the string. Super easy, really,
+            // given the mvadd*n*str() function. We can just juggle a few
+            // pointers and reduce len until all of the string has been displayed
+            // Remember to break the loop if we run out of rows(or just inc i).
             mvaddnstr(i, 0, &g_cmem[offset], len);
             dump(&g_cmem[offset], len);
         }
